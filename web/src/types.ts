@@ -59,6 +59,8 @@ export interface CatalogItem {
   category_id: number | null
   store_id: number | null
   default_price: number | null
+  price_min: number | null
+  price_max: number | null
   sku: string | null
   is_active: boolean
   category_name: string | null

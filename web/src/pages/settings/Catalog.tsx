@@ -6,7 +6,7 @@ import { useFeedback } from '../../components/Feedback'
 import { Page, TopBar } from '../../components/Layout'
 import { Sheet } from '../../components/Sheet'
 import { Badge, Button, ColorPicker, EmptyState, Field, Input, Segmented, Select, Switch, Textarea, cx } from '../../components/ui'
-import { KIND_LABELS, money } from '../../lib/format'
+import { KIND_LABELS, money, priceRange } from '../../lib/format'
 import type { CatalogItem, Category, ItemKind } from '../../types'
 
 export default function CatalogSettings() {
@@ -91,6 +91,7 @@ export default function CatalogSettings() {
                   </span>
                   <span className="shrink-0 text-end">
                     {i.default_price !== null && <span className="num block text-[15px] font-semibold">{money(i.default_price)}</span>}
+                    {priceRange(i.price_min, i.price_max) && <span className="num block text-[12px] text-muted">{priceRange(i.price_min, i.price_max)}</span>}
                     <span className="text-[12px] text-muted">
                       <span className="num">{i.usage_count}</span> فاتورة
                     </span>
@@ -134,6 +135,8 @@ function ItemSheet({ item, onClose }: { item: CatalogItem | null; onClose: () =>
     category_id: item?.category_id ? String(item.category_id) : '',
     store_id: item?.store_id ? String(item.store_id) : restricted ? String(user.store_ids[0]) : '',
     default_price: item?.default_price !== null && item?.default_price !== undefined ? String(item.default_price) : '',
+    price_min: item?.price_min != null ? String(item.price_min) : '',
+    price_max: item?.price_max != null ? String(item.price_max) : '',
     sku: item?.sku ?? '',
     description: item?.description ?? '',
     is_active: item?.is_active ?? true,
@@ -143,7 +146,7 @@ function ItemSheet({ item, onClose }: { item: CatalogItem | null; onClose: () =>
   const save = async () => {
     setSaving(true)
     try {
-      const body = { ...f, category_id: f.category_id || null, store_id: f.store_id || null, default_price: f.default_price || null }
+      const body = { ...f, category_id: f.category_id || null, store_id: f.store_id || null, default_price: f.default_price || null, price_min: f.price_min || null, price_max: f.price_max || null }
       if (item) await api(`catalog/items/${item.id}`, { method: 'PUT', body })
       else await api('catalog/items', { method: 'POST', body })
       await reloadCatalog()
@@ -226,6 +229,14 @@ function ItemSheet({ item, onClose }: { item: CatalogItem | null; onClose: () =>
             ))}
           </Select>
         </Field>
+        <div className="grid grid-cols-2 gap-3">
+          <Field label="أقل سعر" hint="نطاق السعر المعتاد (اختياري)">
+            <Input inputMode="decimal" value={f.price_min} onChange={(e) => setF({ ...f, price_min: e.target.value })} className="num text-end" />
+          </Field>
+          <Field label="أعلى سعر">
+            <Input inputMode="decimal" value={f.price_max} onChange={(e) => setF({ ...f, price_max: e.target.value })} className="num text-end" />
+          </Field>
+        </div>
         <div className="grid grid-cols-2 gap-3">
           <Field label="السعر الافتراضي">
             <Input inputMode="decimal" value={f.default_price} onChange={(e) => setF({ ...f, default_price: e.target.value })} className="num text-end" />
