@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { api } from './api'
 import { AppProvider, useApp } from './context'
-import { BottomNav, OfflineBanner } from './components/Layout'
+import { OfflineBanner, Shell } from './components/Layout'
 import { Button, PageLoader } from './components/ui'
 import Add from './pages/Add'
 import Home from './pages/Home'
@@ -63,8 +63,9 @@ export default function App() {
       {boot.state === 'login' && <Login onLogin={setUser} />}
       {boot.state === 'ready' && (
         <AppProvider user={boot.user} setUser={setUser}>
-          <AppRoutes />
-          <BottomNav />
+          <Shell>
+            <AppRoutes />
+          </Shell>
         </AppProvider>
       )}
     </>

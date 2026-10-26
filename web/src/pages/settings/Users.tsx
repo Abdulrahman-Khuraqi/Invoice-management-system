@@ -38,9 +38,9 @@ export function UsersSettings() {
           </Button>
         }
       />
-      <Page>
+      <Page width="medium">
         {!users && <PageLoader />}
-        <div className="space-y-2.5">
+        <div className="space-y-2.5 lg:grid lg:grid-cols-2 lg:gap-3 lg:space-y-0">
           {users?.map((u) => (
             <Card key={u.id} onClick={() => setEdit(u)} className={`flex items-center gap-3 ${u.is_active ? '' : 'opacity-60'}`}>
               <span className="flex size-12 items-center justify-center rounded-full bg-primary-soft text-[18px] font-bold text-primary">{u.display_name.slice(0, 1)}</span>
@@ -198,7 +198,7 @@ export function ActivityPage() {
   return (
     <>
       <TopBar title="سجل النشاط" back />
-      <Page>
+      <Page width="medium">
         {!loading && !rows.length && <EmptyState icon={<History className="size-8" />} title="لا يوجد نشاط بعد" />}
         <div className="space-y-2">
           {rows.map((a) => (

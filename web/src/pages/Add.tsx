@@ -25,8 +25,9 @@ export default function Add() {
   return (
     <>
       <TopBar title="إضافة فواتير" />
-      <Page>
+      <Page width="medium">
         <Segmented
+          className="lg:max-w-md"
           value={tab}
           onChange={choose}
           options={[

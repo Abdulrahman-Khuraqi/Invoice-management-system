@@ -57,9 +57,9 @@ export function IconButton({ className, label, children, ...rest }: ButtonHTMLAt
   )
 }
 
-export function Field({ label, hint, error, children, required }: { label: string; hint?: string; error?: string; children: ReactNode; required?: boolean }) {
+export function Field({ label, hint, error, children, required, className }: { label: string; hint?: string; error?: string; children: ReactNode; required?: boolean; className?: string }) {
   return (
-    <label className="block">
+    <label className={cx('block', className)}>
       <span className="mb-1.5 block text-[15px] font-medium text-fg">
         {label}
         {required && <span className="ms-1 text-danger">*</span>}
@@ -152,9 +152,9 @@ export function StoreDot({ color, className }: { color: string; className?: stri
   return <span className={cx('inline-block size-2.5 shrink-0 rounded-full', className)} style={{ background: color }} />
 }
 
-export function Segmented<T extends string>({ value, onChange, options }: { value: T; onChange: (v: T) => void; options: { value: T; label: ReactNode }[] }) {
+export function Segmented<T extends string>({ value, onChange, options, className }: { value: T; onChange: (v: T) => void; options: { value: T; label: ReactNode }[]; className?: string }) {
   return (
-    <div className="flex rounded-2xl bg-surface-2 p-1">
+    <div className={cx('flex rounded-2xl bg-surface-2 p-1', className)}>
       {options.map((o) => (
         <button
           key={o.value}
@@ -225,9 +225,9 @@ export function EmptyState({ icon, title, text, action }: { icon: ReactNode; tit
   )
 }
 
-export function SectionTitle({ children, action }: { children: ReactNode; action?: ReactNode }) {
+export function SectionTitle({ children, action, className }: { children: ReactNode; action?: ReactNode; className?: string }) {
   return (
-    <div className="mb-2 mt-6 flex items-center justify-between px-1">
+    <div className={cx('mb-2 mt-6 flex items-center justify-between px-1', className)}>
       <h2 className="text-[15px] font-semibold text-muted">{children}</h2>
       {action}
     </div>

@@ -60,7 +60,7 @@ export default function Reports() {
         }
       />
       <Page>
-        <div className="no-scrollbar -mx-4 mb-4 flex gap-2 overflow-x-auto px-4">
+        <div className="no-scrollbar -mx-4 mb-4 flex gap-2 overflow-x-auto px-4 lg:mx-0 lg:flex-wrap lg:px-0">
           {(['month', 'last_month', 'year', 'all'] as RangeKey[]).map((k) => (
             <Chip
               key={k}
@@ -82,7 +82,7 @@ export default function Reports() {
         {stats && stats.count === 0 && <EmptyState icon={<BarChart3 className="size-8" />} title="لا توجد بيانات في هذه الفترة" />}
         {stats && stats.count > 0 && (
           <>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-3 lg:grid-cols-4 lg:gap-4">
               <Card>
                 <p className="text-[14px] text-muted">المجموع</p>
                 <Money value={stats.sum} className="mt-1 block text-[22px] font-bold" />
@@ -103,40 +103,43 @@ export default function Reports() {
 
             <DailyChart rows={stats.daily} />
 
+            <div className="lg:grid lg:grid-cols-2 lg:items-start lg:gap-x-8">
+
             {!currentStore && stats.by_store.length > 0 && (
-              <>
+              <div>
                 <SectionTitle>حسب المتجر</SectionTitle>
                 <Bars rows={stats.by_store} total={stats.sum} />
-              </>
+              </div>
             )}
 
             {stats.by_kind.length > 0 && (
-              <>
+              <div>
                 <SectionTitle>خدمات مقابل منتجات</SectionTitle>
                 <Bars
                   rows={stats.by_kind.map((k) => ({ ...k, name: k.kind ? KIND_LABELS[k.kind] : '', color: k.kind === 'service' ? 'var(--primary)' : 'var(--success)' }))}
                   total={stats.by_kind.reduce((a, k) => a + k.total, 0)}
                 />
-              </>
+              </div>
             )}
 
             {stats.by_category.length > 0 && (
-              <>
+              <div>
                 <SectionTitle>حسب التصنيف</SectionTitle>
                 <Bars rows={stats.by_category} total={stats.by_category.reduce((a, k) => a + k.total, 0)} onClick={(r) => r.id && navigate(`/invoices?category=${r.id}${linkQuery ? '&' + linkQuery : ''}`)} />
-              </>
+              </div>
             )}
 
             {stats.by_item.length > 0 && (
-              <>
+              <div>
                 <SectionTitle>حسب الخدمة والمنتج</SectionTitle>
                 <Bars
                   rows={stats.by_item.map((r) => ({ ...r, color: r.kind === 'service' ? 'var(--primary)' : 'var(--success)' }))}
                   total={stats.by_item.reduce((a, k) => a + k.total, 0)}
                   onClick={(r) => navigate(`/invoices?item=${r.id}${linkQuery ? '&' + linkQuery : ''}`)}
                 />
-              </>
+              </div>
             )}
+            </div>
             {stats.unclassified > 0 && (
               <p className="mt-3 px-1 text-[13px] text-muted">
                 التقارير حسب الخدمة والتصنيف لا تشمل <span className="num">{stats.unclassified}</span> فاتورة غير مصنّفة (<Money value={stats.unclassified_sum} />).
@@ -210,7 +213,7 @@ function DailyChart({ rows }: { rows: StatRow[] }) {
           </span>
           <span className="num font-semibold text-fg">{compact(best.total)} ر.س</span>
         </div>
-        <div className="flex h-36 items-end gap-[3px]" dir="ltr">
+        <div className="flex h-36 items-end gap-[3px] lg:h-56 lg:gap-1" dir="ltr">
           {data.map((d) => (
             <div key={d.day} className="group relative flex h-full flex-1 items-end" title={`${d.day}: ${d.total}`}>
               <div className="w-full rounded-t-md bg-primary/80 transition group-hover:bg-primary" style={{ height: `${Math.max((d.total / max) * 100, 2)}%` }} />

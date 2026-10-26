@@ -94,6 +94,11 @@ body {
     padding-left: 44px !important;
   }
 
+  /* Mouse users expect a pointer cursor on clickable things. */
+  button:not(:disabled), [role='button'], select, summary {
+    cursor: pointer;
+  }
+
   /* 16px inputs stop iOS from zooming on focus. */
   input, select, textarea {
     font-size: 16px;
@@ -110,7 +115,10 @@ body {
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { scrollbar-width: none; }
 
-.pb-nav { padding-bottom: calc(88px + env(safe-area-inset-bottom)); }
+/* Room for the bottom bar — phones only; desktop uses the sidebar. */
+@media (max-width: 1023.98px) {
+  .pb-nav { padding-bottom: calc(88px + env(safe-area-inset-bottom)); }
+}
 .safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
 .safe-top { padding-top: env(safe-area-inset-top); }
 

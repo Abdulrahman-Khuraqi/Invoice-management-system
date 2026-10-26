@@ -4,9 +4,9 @@ import { ArrowLeftRight, CalendarDays, CheckSquare, Download, FileText, SlidersH
 import { api, errorMessage } from '../api'
 import { useApp } from '../context'
 import { useFeedback } from '../components/Feedback'
-import { InvoiceCard, InvoiceSheet } from '../components/InvoiceViews'
+import { InvoiceCard, InvoiceSheet, InvoiceTable } from '../components/InvoiceViews'
 import { ItemPicker } from '../components/ItemPicker'
-import { Page, TopBar } from '../components/Layout'
+import { Page, TopBar, useIsDesktop } from '../components/Layout'
 import { Sheet } from '../components/Sheet'
 import { Button, Chip, EmptyState, Field, IconButton, Input, Money, PageLoader, Segmented, Select, Spinner, StoreDot, cx } from '../components/ui'
 import { PAY_METHODS, RANGE_LABELS, rangeDates, ymd, type RangeKey } from '../lib/format'
@@ -29,6 +29,7 @@ export default function Invoices() {
   const [selectMode, setSelectMode] = useState(false)
   const [sheet, setSheet] = useState<null | 'range' | 'filters' | 'item' | 'bulkItem' | 'bulkMove'>(null)
   const [exporting, setExporting] = useState(false)
+  const desktop = useIsDesktop()
   const reqId = useRef(0)
   const sentinel = useRef<HTMLDivElement>(null)
 
@@ -179,15 +180,15 @@ export default function Invoices() {
         }
       />
       <Page>
-        <div className="sticky top-[calc(64px+env(safe-area-inset-top))] z-20 -mx-4 bg-bg/90 px-4 pb-2 backdrop-blur-md">
-          <div className="relative">
+        <div className="sticky top-[calc(64px+env(safe-area-inset-top))] z-20 -mx-4 bg-bg/90 px-4 pb-2 backdrop-blur-md lg:top-[72px] lg:-mx-8 lg:flex lg:items-center lg:gap-3 lg:px-8 lg:pb-3 lg:pt-1">
+          <div className="relative lg:w-96 lg:shrink-0">
             <Search className="pointer-events-none absolute start-4 top-1/2 size-5 -translate-y-1/2 text-muted" />
             <Input
               type="search"
               value={q}
               onChange={(e) => setQ(e.target.value)}
               placeholder="ابحث بالاسم، الجوال، رقم الفاتورة، الخدمة…"
-              className="ps-12 pe-11"
+              className="ps-12 pe-11 lg:h-11"
               enterKeyHint="search"
             />
             {q && (
@@ -196,7 +197,7 @@ export default function Invoices() {
               </button>
             )}
           </div>
-          <div className="no-scrollbar -mx-4 mt-2.5 flex gap-2 overflow-x-auto px-4 pb-1">
+          <div className="no-scrollbar -mx-4 mt-2.5 flex gap-2 overflow-x-auto px-4 pb-1 lg:m-0 lg:flex-wrap lg:overflow-visible lg:p-0">
             <Chip active={params.get('unclassified') === '1'} onClick={() => setParam({ unclassified: params.get('unclassified') === '1' ? null : '1' })}>
               غير مصنّفة
             </Chip>
@@ -244,7 +245,18 @@ export default function Invoices() {
             }
           />
         )}
-        {!loading && (
+        {!loading && desktop && !!data?.invoices.length && (
+          <InvoiceTable
+            invoices={data.invoices}
+            showStore={!currentStore}
+            onOpen={setOpen}
+            selectMode={selectMode}
+            selected={selected}
+            onToggle={can('editor') ? toggle : undefined}
+            onToggleAll={() => setSelected((s) => (s.size === data.invoices.length ? new Set() : new Set(data.invoices.map((i) => i.id))))}
+          />
+        )}
+        {!loading && !desktop && (
           <div className="space-y-2.5">
             {data?.invoices.map((inv) => (
               <InvoiceCard
@@ -265,7 +277,7 @@ export default function Invoices() {
 
       {/* Bulk actions bar */}
       {selectMode && (
-        <div className="fixed inset-x-0 bottom-[calc(100px+env(safe-area-inset-bottom))] z-40 px-3">
+        <div className="fixed inset-x-0 bottom-[calc(100px+env(safe-area-inset-bottom))] z-40 px-3 lg:bottom-6 lg:ps-64">
           <div className="mx-auto flex max-w-2xl items-center gap-1 rounded-3xl border border-line bg-surface p-2 shadow-2xl">
             <button
               className="flex h-12 min-w-0 flex-1 items-center gap-2 rounded-2xl px-3 text-[15px] font-semibold"

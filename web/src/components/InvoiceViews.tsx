@@ -111,6 +111,96 @@ export function InvoiceCard({
   )
 }
 
+/** Desktop list: one row per invoice, columns instead of stacked card text. */
+export function InvoiceTable({
+  invoices,
+  onOpen,
+  selectMode,
+  selected,
+  onToggle,
+  onToggleAll,
+  showStore = true,
+}: {
+  invoices: Invoice[]
+  onOpen: (inv: Invoice) => void
+  selectMode?: boolean
+  selected?: Set<number>
+  onToggle?: (id: number) => void
+  onToggleAll?: () => void
+  showStore?: boolean
+}) {
+  const allSelected = !!selected && invoices.length > 0 && selected.size === invoices.length
+  const box = (on: boolean) => (
+    <span className={cx('flex size-5 items-center justify-center rounded-md border-2', on ? 'border-primary bg-primary text-primary-fg' : 'border-line')}>
+      {on && <Check className="size-3.5" strokeWidth={3} />}
+    </span>
+  )
+  const th = 'px-4 py-3 text-start text-[13px] font-semibold text-muted'
+  return (
+    <div className="overflow-hidden rounded-2xl border border-line bg-surface shadow-card">
+      <table className="w-full border-collapse text-[14px]">
+        <thead className="bg-surface-2/60">
+          <tr className="border-b border-line">
+            {onToggle && (
+              <th className="w-12 ps-4">
+                <button aria-label="تحديد الكل" onClick={onToggleAll} className="flex items-center">
+                  {box(allSelected)}
+                </button>
+              </th>
+            )}
+            <th className={th}>العميل</th>
+            {showStore && <th className={th}>المتجر</th>}
+            <th className={th}>التاريخ</th>
+            <th className={th}>الخدمة / المنتج</th>
+            <th className={th}>الدفع</th>
+            <th className={cx(th, 'text-end')}>المبلغ</th>
+          </tr>
+        </thead>
+        <tbody>
+          {invoices.map((inv) => {
+            const on = !!selected?.has(inv.id)
+            return (
+              <tr
+                key={inv.id}
+                onClick={() => (selectMode ? onToggle?.(inv.id) : onOpen(inv))}
+                className={cx('cursor-pointer border-b border-line transition last:border-0 hover:bg-surface-2/70', on && 'bg-primary-soft/60')}
+              >
+                {onToggle && (
+                  <td className="ps-4" onClick={(e) => (e.stopPropagation(), onToggle(inv.id))}>
+                    {box(on)}
+                  </td>
+                )}
+                <td className="max-w-[240px] px-4 py-3">
+                  <span className="block truncate font-semibold leading-snug">{inv.customer_name || 'بدون اسم'}</span>
+                  {inv.invoice_no && <span className="num block text-[12px] leading-snug text-muted">#{inv.invoice_no}</span>}
+                </td>
+                {showStore && (
+                  <td className="px-4 py-3">
+                    <span className="flex items-center gap-2">
+                      <StoreDot color={inv.store_color} />
+                      <span className="truncate">{inv.store_name}</span>
+                    </span>
+                  </td>
+                )}
+                <td className="whitespace-nowrap px-4 py-3 text-muted">{fmtDate(inv.paid_at)}</td>
+                <td className="px-4 py-3">
+                  <span className="flex flex-wrap gap-1.5">
+                    <ItemChips invoice={inv} />
+                  </span>
+                </td>
+                <td className="whitespace-nowrap px-4 py-3 text-muted">{payLabel(inv.pay_method)}</td>
+                <td className="px-4 py-3 text-end">
+                  <Money value={inv.amount} className="font-bold" />
+                </td>
+              </tr>
+            )
+          })}
+        </tbody>
+      </table>
+    </div>
+  )
+}
+
 function Row({ label, children, copy }: { label: string; children: ReactNode; copy?: string | null }) {
   const { toast } = useFeedback()
   if (children === null || children === undefined || children === '') return null

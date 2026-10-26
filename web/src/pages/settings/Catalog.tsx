@@ -36,8 +36,9 @@ export default function CatalogSettings() {
           )
         }
       />
-      <Page>
+      <Page width="medium">
         <Segmented
+          className="lg:max-w-md"
           value={tab}
           onChange={setTab}
           options={[
@@ -52,6 +53,7 @@ export default function CatalogSettings() {
               <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="ابحث…" className="ps-12" />
             </div>
             <Segmented
+              className="lg:max-w-md"
               value={kind}
               onChange={setKind}
               options={[
@@ -69,7 +71,7 @@ export default function CatalogSettings() {
                 action={can('editor') && <Button onClick={() => setEditItem('new')}>إضافة أول عنصر</Button>}
               />
             )}
-            <div className="space-y-2">
+            <div className="space-y-2 lg:grid lg:grid-cols-2 lg:gap-3 lg:space-y-0">
               {list.map((i) => (
                 <button
                   key={i.id}
@@ -98,8 +100,8 @@ export default function CatalogSettings() {
             </div>
           </div>
         ) : (
-          <div className="mt-4 space-y-2">
-            <p className="px-1 text-[14px] text-muted">التصنيفات تجمع الخدمات والمنتجات (مثل: باقات، استشارات، ملابس) لتظهر في التقارير.</p>
+          <div className="mt-4 space-y-2 lg:grid lg:grid-cols-2 lg:gap-3 lg:space-y-0">
+            <p className="px-1 lg:col-span-2 text-[14px] text-muted">التصنيفات تجمع الخدمات والمنتجات (مثل: باقات، استشارات، ملابس) لتظهر في التقارير.</p>
             {categories.map((c) => (
               <button
                 key={c.id}

@@ -95,9 +95,11 @@ export function InvoiceForm({ initial, onSaved, onCancel }: { initial?: Invoice;
     }
   }
 
+  // Container queries: roomy cards (desktop Add page) get two columns; the phone layout and the narrow edit dialog stay single-column.
   return (
-    <div className="space-y-4">
-      <Field label="المتجر" required error={errors.store_id}>
+    <div className="@container">
+    <div className="space-y-4 @2xl:grid @2xl:grid-cols-2 @2xl:gap-x-5 @2xl:gap-y-4 @2xl:space-y-0">
+      <Field label="المتجر" required error={errors.store_id} className="@2xl:order-1">
         <Select value={f.store_id} onChange={set('store_id')}>
           <option value="">اختر المتجر…</option>
           {archivedStore && <option value={archivedStore.id}>{archivedStore.name} (مؤرشف)</option>}
@@ -109,15 +111,15 @@ export function InvoiceForm({ initial, onSaved, onCancel }: { initial?: Invoice;
         </Select>
       </Field>
 
-      <Field label="المبلغ (ر.س)" required error={errors.amount}>
+      <Field label="المبلغ (ر.س)" required error={errors.amount} className="@2xl:order-2">
         <Input inputMode="decimal" value={f.amount} onChange={set('amount')} placeholder="0.00" className="num text-end text-[20px] font-semibold" />
       </Field>
-      <Field label="التاريخ والوقت" required error={errors.paid_at}>
+      <Field label="التاريخ والوقت" required error={errors.paid_at} className="@2xl:order-3">
         <Input type="datetime-local" value={f.paid_at} onChange={set('paid_at')} className="num text-end" />
       </Field>
 
       {/* What is this invoice for */}
-      <div className="rounded-3xl border border-line bg-surface-2/50 p-4">
+      <div className="rounded-3xl border border-line bg-surface-2/50 p-4 @2xl:order-5 @2xl:col-span-2">
         <div className="mb-3 flex items-center justify-between">
           <div>
             <p className="text-[16px] font-semibold">الخدمة / المنتج</p>
@@ -174,18 +176,18 @@ export function InvoiceForm({ initial, onSaved, onCancel }: { initial?: Invoice;
         )}
       </div>
 
-      <Field label="اسم العميل">
+      <Field label="اسم العميل" className="@2xl:order-6 @2xl:col-span-2">
         <Input value={f.customer_name} onChange={set('customer_name')} autoComplete="off" />
       </Field>
-      <div className="grid grid-cols-2 gap-3">
-        <Field label="الجوال">
+      <div className="grid grid-cols-2 gap-3 @2xl:contents">
+        <Field label="الجوال" className="@2xl:order-7">
           <Input type="tel" inputMode="tel" value={f.phone} onChange={set('phone')} className="num text-end" />
         </Field>
-        <Field label="رقم الفاتورة">
+        <Field label="رقم الفاتورة" className="@2xl:order-8">
           <Input value={f.invoice_no} onChange={set('invoice_no')} className="num text-end" />
         </Field>
       </div>
-      <Field label="طريقة الدفع">
+      <Field label="طريقة الدفع" className="@2xl:order-4">
         <Select value={f.pay_method} onChange={set('pay_method')}>
           <option value="">—</option>
           {Object.entries(PAY_METHODS).map(([v, l]) => (
@@ -195,16 +197,16 @@ export function InvoiceForm({ initial, onSaved, onCancel }: { initial?: Invoice;
           ))}
         </Select>
       </Field>
-      <Field label="ملاحظة">
+      <Field label="ملاحظة" className="@2xl:order-9 @2xl:col-span-2">
         <Textarea value={f.note} onChange={set('note')} placeholder="ملاحظات للمتابعة لاحقاً…" />
       </Field>
 
-      <button type="button" onClick={() => setMore((m) => !m)} className="flex h-11 items-center gap-1 text-[15px] font-semibold text-primary">
+      <button type="button" onClick={() => setMore((m) => !m)} className="flex h-11 items-center gap-1 text-[15px] font-semibold text-primary @2xl:order-10 @2xl:col-span-2 @2xl:justify-self-start">
         <ChevronDown className={cx('size-5 transition', more && 'rotate-180')} />
         تفاصيل إضافية
       </button>
       {more && (
-        <div className="space-y-4">
+        <div className="space-y-4 @2xl:order-10 @2xl:col-span-2">
           <Field label="الإيميل">
             <Input type="email" value={f.email} onChange={set('email')} className="num text-end" />
           </Field>
@@ -225,7 +227,7 @@ export function InvoiceForm({ initial, onSaved, onCancel }: { initial?: Invoice;
         </div>
       )}
 
-      <div className="flex gap-3 pt-2">
+      <div className="flex gap-3 pt-2 @2xl:order-last @2xl:col-span-2 @2xl:justify-start [&>button]:@2xl:w-56 [&>button]:@2xl:flex-none">
         <Button size="lg" block loading={saving} onClick={submit}>
           {initial ? 'حفظ التعديلات' : 'حفظ الفاتورة'}
         </Button>
@@ -252,6 +254,7 @@ export function InvoiceForm({ initial, onSaved, onCancel }: { initial?: Invoice;
           )
         }
       />
+    </div>
     </div>
   )
 }

@@ -60,9 +60,10 @@ export default function Home() {
         {!stats && <PageLoader />}
         {stats && (
           <>
-            <div className="rounded-[28px] bg-primary p-5 text-primary-fg shadow-lg shadow-primary/25">
+            <div className="lg:grid lg:grid-cols-3 lg:gap-4">
+            <div className={`rounded-[28px] bg-primary p-5 text-primary-fg shadow-lg shadow-primary/25 lg:p-7 ${stats.unclassified > 0 ? 'lg:col-span-2' : 'lg:col-span-3'}`}>
               <p className="text-[15px] opacity-85">إجمالي المبيعات · {RANGE_LABELS[range]}</p>
-              <p className="mt-1 text-[34px] font-bold leading-tight">
+              <p className="mt-1 text-[34px] font-bold leading-tight lg:text-[44px]">
                 <span className="num">{money(stats.sum)}</span>
                 <span className="ms-1.5 text-[18px] font-medium opacity-80">ر.س</span>
               </p>
@@ -74,7 +75,7 @@ export default function Home() {
             {stats.unclassified > 0 && (
               <button
                 onClick={() => navigate(`/invoices?unclassified=1${rangeQuery()}`)}
-                className="mt-3 flex w-full items-center gap-3 rounded-3xl border border-warn/30 bg-warn-soft p-4 text-start transition active:scale-[0.99]"
+                className="mt-3 flex w-full items-center gap-3 rounded-3xl border border-warn/30 bg-warn-soft p-4 text-start transition hover:brightness-95 active:scale-[0.99] lg:mt-0 lg:flex-col lg:items-start lg:justify-center lg:gap-4 lg:p-6"
               >
                 <span className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-warn text-white">
                   <AlertCircle className="size-6" />
@@ -85,9 +86,10 @@ export default function Home() {
                   </span>
                   <span className="text-[14px] text-warn/80">حدد الخدمة أو المنتج لكل فاتورة</span>
                 </span>
-                <ChevronLeft className="size-6 text-warn" />
+                <ChevronLeft className="size-6 text-warn lg:hidden" />
               </button>
             )}
+            </div>
 
             {stats.count === 0 && (
               <EmptyState
@@ -107,7 +109,7 @@ export default function Home() {
             {!currentStore && stats.by_store.length > 0 && (
               <>
                 <SectionTitle>المتاجر</SectionTitle>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 gap-3 lg:grid-cols-[repeat(auto-fit,minmax(220px,1fr))] lg:gap-4">
                   {stats.by_store.map((s) => (
                     <Card key={s.id} className="p-4" onClick={() => (setCurrentStore(s.id!), navigate(`/invoices?${rangeQuery().slice(1)}`))}>
                       <span className="flex items-center gap-2 text-[15px] font-semibold">
@@ -124,8 +126,9 @@ export default function Home() {
               </>
             )}
 
+            <div className="lg:grid lg:grid-cols-2 lg:items-start lg:gap-8">
             {stats.by_item.length > 0 && (
-              <>
+              <div>
                 <SectionTitle
                   action={
                     <button className="text-[14px] font-semibold text-primary" onClick={() => navigate('/reports')}>
@@ -152,11 +155,11 @@ export default function Home() {
                     </button>
                   ))}
                 </Card>
-              </>
+              </div>
             )}
 
             {recent.length > 0 && (
-              <>
+              <div>
                 <SectionTitle
                   action={
                     <button className="text-[14px] font-semibold text-primary" onClick={() => navigate('/invoices?sort=added_desc')}>
@@ -171,8 +174,9 @@ export default function Home() {
                     <InvoiceCard key={inv.id} invoice={inv} showStore={!currentStore} onOpen={() => setOpen(inv)} />
                   ))}
                 </div>
-              </>
+              </div>
             )}
+            </div>
           </>
         )}
       </Page>

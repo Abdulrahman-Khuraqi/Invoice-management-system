@@ -6,7 +6,24 @@ import type { User } from '../types'
 
 function AuthShell({ title, subtitle, children }: { title: string; subtitle: string; children: ReactNode }) {
   return (
-    <div className="safe-top flex min-h-dvh flex-col items-center justify-center px-5 py-10">
+    <div className="safe-top min-h-dvh lg:grid lg:grid-cols-2">
+      {/* Desktop only: brand panel */}
+      <div className="relative hidden flex-col justify-between overflow-hidden bg-primary p-12 text-primary-fg lg:flex">
+        <div className="pointer-events-none absolute -bottom-32 -end-32 size-[28rem] rounded-full bg-white/10" />
+        <div className="pointer-events-none absolute -top-24 -start-24 size-80 rounded-full bg-white/5" />
+        <span className="relative flex items-center gap-3 text-[20px] font-bold">
+          <span className="flex size-11 items-center justify-center rounded-xl bg-white/15">
+            <FileText className="size-6" />
+          </span>
+          إدارة الفواتير
+        </span>
+        <div className="relative max-w-md">
+          <h2 className="text-[34px] font-bold leading-snug">كل فواتير متاجرك في مكان واحد</h2>
+          <p className="mt-4 text-[17px] leading-relaxed opacity-85">استورد ملفات Excel من بوابة الدفع، صنّف المبيعات، وتابع التقارير لكل متجر بسهولة.</p>
+        </div>
+        <span className="relative text-[14px] opacity-70">الإصدار 1.0</span>
+      </div>
+      <div className="flex flex-col items-center justify-center px-5 py-10">
       <div className="w-full max-w-sm">
         <div className="mb-8 text-center">
           <span className="mx-auto flex size-18 items-center justify-center rounded-[26px] bg-primary text-primary-fg shadow-lg shadow-primary/30">
@@ -15,7 +32,8 @@ function AuthShell({ title, subtitle, children }: { title: string; subtitle: str
           <h1 className="mt-5 text-[26px] font-bold">{title}</h1>
           <p className="mt-1 text-[16px] text-muted">{subtitle}</p>
         </div>
-        <div className="rounded-[28px] border border-line bg-surface p-5 shadow-card">{children}</div>
+        <div className="rounded-[28px] border border-line bg-surface p-5 shadow-card lg:p-7">{children}</div>
+      </div>
       </div>
     </div>
   )

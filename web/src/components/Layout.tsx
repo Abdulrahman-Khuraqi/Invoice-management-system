@@ -1,6 +1,7 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { BarChart3, Check, ChevronDown, ChevronRight, FileText, Home, Plus, Settings, Store as StoreIcon, WifiOff } from 'lucide-react'
+import { ROLE_LABELS } from '../lib/format'
 import { useApp } from '../context'
 import { Sheet } from './Sheet'
 import { IconButton, StoreDot, cx } from './ui'
@@ -16,7 +17,7 @@ const NAV = [
 export function BottomNav() {
   const { can } = useApp()
   return (
-    <nav className="safe-bottom fixed inset-x-0 bottom-0 z-40 border-t border-line bg-surface/95 backdrop-blur-md">
+    <nav className="safe-bottom fixed inset-x-0 bottom-0 z-40 border-t border-line bg-surface/95 backdrop-blur-md lg:hidden">
       <div className="mx-auto flex max-w-2xl items-end justify-around px-2">
         {NAV.filter((n) => !n.center || can('editor')).map((n) =>
           n.center ? (
@@ -60,18 +61,104 @@ export function BottomNav() {
   )
 }
 
+/** Desktop-only: persistent side navigation (replaces the bottom bar from 1024px up). */
+export function Sidebar() {
+  const { can, user } = useApp()
+  return (
+    <aside className="fixed inset-y-0 start-0 z-40 hidden w-64 flex-col border-e border-line bg-surface lg:flex">
+      <div className="flex h-18 items-center gap-3 px-5">
+        <span className="flex size-10 items-center justify-center rounded-xl bg-primary text-primary-fg shadow-md shadow-primary/25">
+          <FileText className="size-5" />
+        </span>
+        <span className="text-[18px] font-bold">إدارة الفواتير</span>
+      </div>
+
+      {can('editor') && (
+        <div className="px-4 pb-2 pt-1">
+          <NavLink
+            to="/add"
+            className={({ isActive }) =>
+              cx(
+                'flex h-11 items-center justify-center gap-2 rounded-xl bg-primary text-[15px] font-semibold text-primary-fg shadow-md shadow-primary/20 transition hover:opacity-90',
+                isActive && 'ring-4 ring-primary/20',
+              )
+            }
+          >
+            <Plus className="size-5" strokeWidth={2.5} /> إضافة فواتير
+          </NavLink>
+        </div>
+      )}
+
+      <nav className="flex-1 space-y-1 overflow-y-auto px-4 py-3">
+        {NAV.filter((n) => !n.center).map((n) => (
+          <NavLink
+            key={n.to}
+            to={n.to}
+            end={n.end}
+            className={({ isActive }) =>
+              cx(
+                'flex h-11 items-center gap-3 rounded-xl px-3.5 text-[15px] font-medium transition',
+                isActive ? 'bg-primary-soft font-semibold text-primary' : 'text-muted hover:bg-surface-2 hover:text-fg',
+              )
+            }
+          >
+            <n.icon className="size-5" />
+            {n.label}
+          </NavLink>
+        ))}
+      </nav>
+
+      <div className="border-t border-line p-4">
+        <div className="flex items-center gap-3">
+          <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary-soft text-[16px] font-bold text-primary">
+            {user.display_name.slice(0, 1)}
+          </span>
+          <div className="min-w-0">
+            <p className="truncate text-[14px] font-semibold">{user.display_name}</p>
+            <p className="text-[12px] text-muted">{ROLE_LABELS[user.role]}</p>
+          </div>
+        </div>
+      </div>
+    </aside>
+  )
+}
+
+/** Wraps the signed-in app: sidebar on desktop, bottom bar on phones. */
+export function Shell({ children }: { children: ReactNode }) {
+  return (
+    <>
+      <Sidebar />
+      <div className="lg:ps-64">{children}</div>
+      <BottomNav />
+    </>
+  )
+}
+
+/** True from the `lg` breakpoint up (1024px). */
+export function useIsDesktop() {
+  const query = '(min-width: 1024px)'
+  const [match, setMatch] = useState(() => window.matchMedia(query).matches)
+  useEffect(() => {
+    const m = window.matchMedia(query)
+    const on = () => setMatch(m.matches)
+    m.addEventListener('change', on)
+    return () => m.removeEventListener('change', on)
+  }, [])
+  return match
+}
+
 /** Page header with optional back button and the store switcher. */
 export function TopBar({ title, back, switcher, actions }: { title: string; back?: boolean; switcher?: boolean; actions?: ReactNode }) {
   const navigate = useNavigate()
   return (
     <header className="safe-top sticky top-0 z-30 bg-bg/90 backdrop-blur-md">
-      <div className="mx-auto flex min-h-16 max-w-2xl items-center gap-2 px-4">
+      <div className="mx-auto flex min-h-16 max-w-2xl items-center gap-2 px-4 lg:min-h-[72px] lg:max-w-6xl lg:px-8">
         {back && (
           <IconButton label="رجوع" onClick={() => navigate(-1)} className="-ms-2">
             <ChevronRight className="size-7" />
           </IconButton>
         )}
-        <h1 className="min-w-0 flex-1 truncate text-[24px] font-bold">{title}</h1>
+        <h1 className="min-w-0 flex-1 truncate text-[24px] font-bold lg:text-[26px]">{title}</h1>
         {actions}
         {switcher && <StoreSwitcher />}
       </div>
@@ -88,7 +175,7 @@ function StoreSwitcher() {
     <>
       <button
         onClick={() => setOpen(true)}
-        className="flex h-11 max-w-[50%] items-center gap-2 rounded-full border border-line bg-surface px-3.5 text-[15px] font-semibold shadow-card active:scale-95"
+        className="flex h-11 max-w-[50%] items-center gap-2 rounded-full border border-line bg-surface px-3.5 text-[15px] font-semibold shadow-card hover:bg-surface-2 active:scale-95 lg:max-w-xs"
       >
         {current ? <StoreDot color={current.color} /> : <StoreIcon className="size-4 text-muted" />}
         <span className="truncate">{current?.name ?? 'كل المتاجر'}</span>
@@ -119,8 +206,16 @@ function StoreSwitcher() {
   )
 }
 
-export function Page({ children, className }: { children: ReactNode; className?: string }) {
-  return <main className={cx('pb-nav mx-auto max-w-2xl px-4', className)}>{children}</main>
+// Inner width cap; the cap sits at the start edge so it lines up with the page title.
+const PAGE_WIDTH = { wide: '', medium: 'lg:max-w-4xl', narrow: 'lg:max-w-3xl' } as const
+
+/** Phone: single column. Desktop: wider container (`width` picks how wide). */
+export function Page({ children, className, width = 'wide' }: { children: ReactNode; className?: string; width?: keyof typeof PAGE_WIDTH }) {
+  return (
+    <main className={cx('pb-nav mx-auto max-w-2xl px-4 lg:max-w-6xl lg:px-8 lg:pb-12', className)}>
+      <div className={PAGE_WIDTH[width]}>{children}</div>
+    </main>
+  )
 }
 
 export function OfflineBanner() {

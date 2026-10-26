@@ -30,7 +30,10 @@ export default function Settings() {
   return (
     <>
       <TopBar title="الإعدادات" />
-      <Page>
+      <Page width="medium">
+        <div className="lg:grid lg:grid-cols-2 lg:items-start lg:gap-x-8">
+        <div>
+        <SectionTitle className="hidden lg:mb-2 lg:mt-0 lg:flex">الملف الشخصي</SectionTitle>
         <div className="flex items-center gap-4 rounded-3xl border border-line bg-surface p-4 shadow-card">
           <span className="flex size-14 items-center justify-center rounded-full bg-primary-soft text-[22px] font-bold text-primary">{user.display_name.slice(0, 1)}</span>
           <div className="min-w-0 flex-1">
@@ -54,8 +57,10 @@ export default function Settings() {
             { value: 'system', label: <><Monitor className="size-5" /> تلقائي</> },
           ]}
         />
+        </div>
 
-        <SectionTitle>إدارة النظام</SectionTitle>
+        <div>
+        <SectionTitle className="lg:mt-0">إدارة النظام</SectionTitle>
         <Group>
           {can('admin') && <Item icon={<StoreIcon />} label="المتاجر" value={String(stores.filter((s) => s.is_active).length)} onClick={() => navigate('/settings/stores')} />}
           <Item icon={<Package />} label="الخدمات والمنتجات" value={String(items.filter((i) => i.is_active).length)} onClick={() => navigate('/settings/catalog')} />
@@ -69,6 +74,8 @@ export default function Settings() {
           <InstallItem />
           <Item icon={<LogOut />} label="تسجيل الخروج" danger onClick={logout} />
         </Group>
+        </div>
+        </div>
         <p className="mt-6 text-center text-[13px] text-muted">إدارة الفواتير · الإصدار 1.0</p>
       </Page>
       <PasswordSheet open={pwOpen} onClose={() => setPwOpen(false)} />

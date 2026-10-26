@@ -42,13 +42,13 @@ export default function StoresSettings() {
           </Button>
         }
       />
-      <Page>
+      <Page width="medium">
         <p className="mb-4 px-1 text-[14px] text-muted">أضف أي عدد من المتاجر. ربط «رقم الجهاز» (TerminalID) بالمتجر يجعل استيراد ملفات بوابة الدفع يتعرف على المتجر تلقائياً.</p>
-        <div className="space-y-2.5">{active.map(row)}</div>
+        <div className="space-y-2.5 lg:grid lg:grid-cols-2 lg:gap-3 lg:space-y-0">{active.map(row)}</div>
         {archived.length > 0 && (
           <>
             <SectionTitle>المتاجر المؤرشفة</SectionTitle>
-            <div className="space-y-2.5 opacity-75">{archived.map(row)}</div>
+            <div className="space-y-2.5 opacity-75 lg:grid lg:grid-cols-2 lg:gap-3 lg:space-y-0">{archived.map(row)}</div>
           </>
         )}
       </Page>
