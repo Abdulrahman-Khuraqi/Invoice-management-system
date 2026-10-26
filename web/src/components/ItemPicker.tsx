@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { Package, Plus, Search, Wrench } from 'lucide-react'
 import { api, errorMessage } from '../api'
 import { useApp } from '../context'
-import { KIND_LABELS, money } from '../lib/format'
+import { KIND_LABELS, money, priceRange } from '../lib/format'
 import type { CatalogItem, ItemKind } from '../types'
 import { useFeedback } from './Feedback'
 import { Sheet } from './Sheet'
@@ -95,7 +95,10 @@ export function ItemPicker({
                     {i.store_name ? <span>· {i.store_name}</span> : <span>· كل المتاجر</span>}
                   </span>
                 </span>
-                {i.default_price !== null && <span className="num shrink-0 text-[15px] font-semibold">{money(i.default_price)}</span>}
+                <span className="shrink-0 text-end">
+                  {i.default_price !== null && <span className="num block text-[15px] font-semibold">{money(i.default_price)}</span>}
+                  {priceRange(i.price_min, i.price_max) && <span className="num block text-[12px] text-muted">{priceRange(i.price_min, i.price_max)}</span>}
+                </span>
               </button>
             ))}
             {!list.length && <p className="py-6 text-center text-[15px] text-muted">{q ? 'لا توجد نتائج' : 'لا توجد خدمات أو منتجات بعد'}</p>}
@@ -156,6 +159,8 @@ export function NewItemForm({
         category_id: form.category_id ? +form.category_id : null,
         store_id: form.store_id ? +form.store_id : null,
         default_price: form.default_price ? +form.default_price : null,
+        price_min: null,
+        price_max: null,
         sku: null,
         is_active: true,
         category_name: categories.find((c) => c.id === +form.category_id)?.name ?? null,

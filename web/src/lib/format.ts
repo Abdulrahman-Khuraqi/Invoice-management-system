@@ -7,7 +7,12 @@ export function money(n: number | null | undefined) {
   const v = Math.round(Number(n ?? 0) * 100) / 100
   return Number.isInteger(v) ? wholeFmt.format(v) : centsFmt.format(v)
 }
-export const compact = (n: number) => (Math.abs(n) >= 100000 ? compactFmt.format(n) : money(n))
+/** "1,900 – 6,000", a single amount when min = max, or null when the item has no range. */
+export function priceRange(min: number | null | undefined, max: number | null | undefined) {
+  if (min == null || max == null) return null
+  return min === max ? money(min) : `${money(min)} – ${money(max)}`
+}
+export const compact =(n: number) => (Math.abs(n) >= 100000 ? compactFmt.format(n) : money(n))
 
 /** "2026-10-12 20:59:11" (server, KSA time) → Date without timezone shifting. */
 export function parseDate(s: string | null | undefined): Date | null {
