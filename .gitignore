@@ -1,0 +1,8 @@
+node_modules/
+web/dist/
+deploy/
+api/config.php
+*.log
+.DS_Store
+*.xlsx
+*.tsbuildinfo
