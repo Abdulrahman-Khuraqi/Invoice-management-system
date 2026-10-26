@@ -5,6 +5,7 @@ import { useApp } from '../../context'
 import { useFeedback } from '../../components/Feedback'
 import { Page, TopBar } from '../../components/Layout'
 import { Sheet } from '../../components/Sheet'
+import { EMPTY_INFO, StoreInfoFields } from '../../components/StoreInfo'
 import { LogoPicker, StoreAvatar } from '../../components/StoreLogo'
 import { Badge, Button, Card, ColorPicker, Field, IconButton, Input, SectionTitle, Select, StoreDot } from '../../components/ui'
 import type { Store } from '../../types'
@@ -19,7 +20,7 @@ export default function StoresSettings() {
 
   const row = (s: Store) => (
     <Card key={s.id} onClick={() => setEditing(s)} className="flex items-center gap-3">
-      <StoreAvatar name={s.name} color={s.color} src={storeLogoUrl(s)} />
+      <StoreAvatar name={s.name} color={s.color} src={storeLogoUrl(s)} bg={s.logo_bg} />
       <span className="min-w-0 flex-1">
         <span className="block truncate text-[17px] font-semibold">{s.name}</span>
         <span className="text-[14px] text-muted">
@@ -74,6 +75,7 @@ function EditStoreSheet({ store, onClose }: { store: Store; onClose: () => void 
   const { toast, confirm } = useFeedback()
   const [name, setName] = useState(store.name)
   const [color, setColor] = useState(store.color)
+  const [info, setInfo] = useState(store.info ?? EMPTY_INFO)
   const [terminal, setTerminal] = useState('')
   const [moveTo, setMoveTo] = useState('')
   const [saving, setSaving] = useState(false)
@@ -93,7 +95,7 @@ function EditStoreSheet({ store, onClose }: { store: Store; onClose: () => void 
 
   const save = async () => {
     setSaving(true)
-    if (await call(() => api(`stores/${store.id}`, { method: 'PUT', body: { name, color } }), 'تم الحفظ')) onClose()
+    if (await call(() => api(`stores/${store.id}`, { method: 'PUT', body: { name, color, info } }), 'تم الحفظ')) onClose()
     setSaving(false)
   }
 
@@ -141,8 +143,9 @@ function EditStoreSheet({ store, onClose }: { store: Store; onClose: () => void 
             name={name}
             color={color}
             src={storeLogoUrl(store)}
-            onPick={async (data) => {
-              await api(`stores/${store.id}/logo`, { method: 'POST', body: { data } })
+            bg={store.logo_bg}
+            onPick={async ({ dataUrl, bg }) => {
+              await api(`stores/${store.id}/logo`, { method: 'POST', body: { data: dataUrl, bg } })
               await reloadStores()
               toast('تم تحديث الشعار')
             }}
@@ -152,6 +155,11 @@ function EditStoreSheet({ store, onClose }: { store: Store; onClose: () => void 
         <Field label="اللون">
           <ColorPicker value={color} onChange={setColor} />
         </Field>
+
+        <div>
+          <p className="mb-2 text-[15px] font-medium">معلومات المتجر</p>
+          <StoreInfoFields value={info} onChange={setInfo} />
+        </div>
 
         <div>
           <p className="mb-1 text-[15px] font-medium">أرقام الأجهزة (TerminalID)</p>

@@ -78,11 +78,12 @@ export function AppProvider({ user, setUser, children }: { user: User; setUser: 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>
 }
 
-/** Logo URL for a store, or null. Safe to call outside the provider. */
-export function useStoreLogo(id: number | null | undefined): string | null {
+/** Logo (URL + backdrop) for a store, or null. Safe to call outside the provider. */
+export function useStoreLogo(id: number | null | undefined): { src: string; bg: 'light' | 'dark' } | null {
   const v = useContext(Ctx)
   const s = id ? v?.stores.find((x) => x.id === id) : undefined
-  return s ? storeLogoUrl(s) : null
+  const src = s ? storeLogoUrl(s) : null
+  return s && src ? { src, bg: s.logo_bg ?? 'light' } : null
 }
 
 export function useApp() {

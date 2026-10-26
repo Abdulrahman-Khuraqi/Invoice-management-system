@@ -11,6 +11,7 @@ import { LogoPicker } from '../components/StoreLogo'
 import { Badge, Button, Card, ColorPicker, Field, Input, Money, Segmented, Select, StoreDot, cx } from '../components/ui'
 import type { ParsedFile, ParsedRow } from '../lib/excel'
 import { PALETTE } from '../lib/format'
+import type { LogoImage } from '../lib/image'
 import { load, save } from '../lib/storage'
 
 type Tab = 'manual' | 'import'
@@ -457,7 +458,7 @@ export function NewStoreSheet({ open, onClose, onCreated, defaultName = '' }: { 
   const { toast } = useFeedback()
   const [name, setName] = useState(defaultName)
   const [color, setColor] = useState(PALETTE[Math.floor(Math.random() * PALETTE.length)])
-  const [logo, setLogo] = useState<string | null>(null)
+  const [logo, setLogo] = useState<LogoImage | null>(null)
   const [saving, setSaving] = useState(false)
   const [lastDefault, setLastDefault] = useState(defaultName)
   if (defaultName !== lastDefault) {
@@ -471,7 +472,7 @@ export function NewStoreSheet({ open, onClose, onCreated, defaultName = '' }: { 
       toast(`تمت إضافة متجر ${name}`)
       if (logo) {
         try {
-          await api(`stores/${r.id}/logo`, { method: 'POST', body: { data: logo } })
+          await api(`stores/${r.id}/logo`, { method: 'POST', body: { data: logo.dataUrl, bg: logo.bg } })
         } catch (e) {
           toast(`تمت إضافة المتجر لكن تعذّر رفع الشعار: ${errorMessage(e)}`, 'error')
         }
@@ -501,7 +502,7 @@ export function NewStoreSheet({ open, onClose, onCreated, defaultName = '' }: { 
           <Input autoFocus value={name} onChange={(e) => setName(e.target.value)} />
         </Field>
         <Field label="الشعار (اختياري)">
-          <LogoPicker name={name} color={color} src={logo} onPick={setLogo} onRemove={() => setLogo(null)} />
+          <LogoPicker name={name} color={color} src={logo?.dataUrl ?? null} bg={logo?.bg} onPick={setLogo} onRemove={() => setLogo(null)} />
         </Field>
         <Field label="اللون">
           <ColorPicker value={color} onChange={setColor} />

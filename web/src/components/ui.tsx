@@ -150,9 +150,9 @@ export function Badge({ children, color, tone = 'neutral', className }: { childr
 }
 
 /** Store color dot — or the store's logo when `storeId` is given and it has one. */
-export function StoreDot({ color, className, storeId }: { color: string; className?: string; storeId?: number | null }) {
+export function StoreDot({ color, className, storeId, logoClassName }: { color: string; className?: string; storeId?: number | null; logoClassName?: string }) {
   const logo = useStoreLogo(storeId)
-  if (logo) return <img src={logo} alt="" className="inline-block size-5 shrink-0 rounded-full bg-white object-contain ring-1 ring-line" />
+  if (logo) return <img src={logo.src} alt="" className={cx('inline-block shrink-0 object-contain p-px ring-1 ring-line', logoClassName ?? 'size-6 rounded-md', logo.bg === 'dark' ? 'bg-slate-800' : 'bg-white')} />
   return <span className={cx('inline-block size-2.5 shrink-0 rounded-full', className)} style={{ background: color }} />
 }
 

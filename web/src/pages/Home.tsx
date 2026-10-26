@@ -6,6 +6,7 @@ import { useApp } from '../context'
 import { useFeedback } from '../components/Feedback'
 import { InvoiceCard, InvoiceSheet } from '../components/InvoiceViews'
 import { Page, TopBar } from '../components/Layout'
+import { StoreInfoCard, hasInfo } from '../components/StoreInfo'
 import { Button, Card, Chip, EmptyState, Money, PageLoader, SectionTitle, StoreDot } from '../components/ui'
 import { RANGE_LABELS, money, rangeDates, type RangeKey } from '../lib/format'
 import { load, save } from '../lib/storage'
@@ -14,7 +15,7 @@ import type { Invoice, InvoiceList, Stats } from '../types'
 const HOME_RANGES: RangeKey[] = ['month', 'last_month', 'year', 'all']
 
 export default function Home() {
-  const { currentStore, setCurrentStore, can } = useApp()
+  const { currentStore, setCurrentStore, can, storeById } = useApp()
   const { toast } = useFeedback()
   const navigate = useNavigate()
   const [range, setRange] = useState<RangeKey>(() => load<RangeKey>('homeRange', 'month'))
@@ -90,6 +91,11 @@ export default function Home() {
               </button>
             )}
             </div>
+
+            {(() => {
+              const st = storeById(currentStore)
+              return st && hasInfo(st.info) ? <StoreInfoCard store={st} /> : null
+            })()}
 
             {stats.count === 0 && (
               <EmptyState

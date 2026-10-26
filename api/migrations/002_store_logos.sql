@@ -4,6 +4,7 @@
 CREATE TABLE IF NOT EXISTS store_logos (
   store_id INT UNSIGNED NOT NULL,
   mime VARCHAR(32) NOT NULL,
+  bg ENUM('light','dark') NOT NULL DEFAULT 'light', -- backdrop to show behind the logo (light logos need a dark one)
   data MEDIUMBLOB NOT NULL,
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (store_id),

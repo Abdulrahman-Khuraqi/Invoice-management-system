@@ -195,7 +195,7 @@ function StoreSwitcher() {
                 currentStore === s.id ? 'bg-primary-soft text-primary' : 'hover:bg-surface-2',
               )}
             >
-              {s.color ? <StoreDot color={s.color} className="size-3.5" storeId={s.id} /> : <StoreIcon className="size-5 text-muted" />}
+              {s.color ? <StoreDot color={s.color} className="size-3.5" storeId={s.id} logoClassName="size-9 rounded-lg" /> : <StoreIcon className="size-5 text-muted" />}
               <span className="flex-1 text-start">{s.name}</span>
               {currentStore === s.id && <Check className="size-5" />}
             </button>
