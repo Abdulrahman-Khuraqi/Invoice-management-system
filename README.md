@@ -30,7 +30,7 @@
    | `DB_PASS` | كلمة مرور مستخدم قاعدة البيانات |
 
 5. **النشر**: أي دفع (push) إلى فرع `main` ينشر تلقائياً. ويمكن التشغيل يدوياً من تبويب Actions ← Deploy to Hostinger ← Run workflow.
-6. افتح `https://asrixsa.com/ms/` وأنشئ حساب المدير، ثم ارفع ملفات Excel من «إضافة ← استيراد Excel».
+6. افتح `https://ms.asrixsa.com/` وأنشئ حساب المدير، ثم ارفع ملفات Excel من «إضافة ← استيراد Excel».
 
 الجداول تُنشأ تلقائياً عند أول طلب (أو يدوياً عبر phpMyAdmin باستيراد `api/migrations/001_init.sql`).
 
