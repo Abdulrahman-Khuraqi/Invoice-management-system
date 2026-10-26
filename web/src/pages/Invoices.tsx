@@ -5,10 +5,11 @@ import { api, errorMessage } from '../api'
 import { useApp } from '../context'
 import { useFeedback } from '../components/Feedback'
 import { InvoiceCard, InvoiceSheet, InvoiceTable } from '../components/InvoiceViews'
+import { ExportSheet } from '../components/ExportSheet'
 import { ItemPicker } from '../components/ItemPicker'
 import { Page, TopBar, useIsDesktop } from '../components/Layout'
 import { Sheet } from '../components/Sheet'
-import { Button, Chip, EmptyState, Field, IconButton, Input, Money, PageLoader, Segmented, Select, Spinner, StoreDot, cx } from '../components/ui'
+import { Button, Chip, EmptyState, Field, IconButton, Input, Money, PageLoader, Segmented, Select, StoreDot, cx } from '../components/ui'
 import { PAY_METHODS, RANGE_LABELS, rangeDates, ymd, type RangeKey } from '../lib/format'
 import type { Invoice, InvoiceList } from '../types'
 
@@ -29,6 +30,7 @@ export default function Invoices() {
   const [selectMode, setSelectMode] = useState(false)
   const [sheet, setSheet] = useState<null | 'range' | 'filters' | 'item' | 'bulkItem' | 'bulkMove'>(null)
   const [exporting, setExporting] = useState(false)
+  const [exportOpen, setExportOpen] = useState(false)
   const desktop = useIsDesktop()
   const reqId = useRef(0)
   const sentinel = useRef<HTMLDivElement>(null)
@@ -141,7 +143,7 @@ export default function Invoices() {
     if (ok) bulk({ action: 'delete' }, 'تم الحذف')
   }
 
-  const doExport = async () => {
+  const doExport = async (keys: string[], totalRow: boolean) => {
     if (!data?.total) return
     setExporting(true)
     try {
@@ -153,7 +155,8 @@ export default function Invoices() {
       }
       const storeName = storeById(currentStore)?.name
       const { exportInvoices } = await import('../lib/excel')
-      exportInvoices(all, `فواتير${storeName ? '-' + storeName : ''}-${ymd(new Date())}.xlsx`)
+      exportInvoices(all, `فواتير${storeName ? '-' + storeName : ''}-${ymd(new Date())}.xlsx`, { keys, totalRow })
+      setExportOpen(false)
     } catch (e) {
       toast(errorMessage(e), 'error')
     } finally {
@@ -174,8 +177,8 @@ export default function Invoices() {
         title="الفواتير"
         switcher
         actions={
-          <IconButton label="تصدير Excel" onClick={doExport} disabled={exporting || !data?.total}>
-            {exporting ? <Spinner className="size-5" /> : <Download className="size-6" />}
+          <IconButton label="تصدير Excel" onClick={() => setExportOpen(true)} disabled={!data?.total}>
+            <Download className="size-6" />
           </IconButton>
         }
       />
@@ -308,6 +311,8 @@ export default function Invoices() {
         onChanged={replaceInvoice}
         onDeleted={(id) => setData((d) => d && { ...d, total: d.total - 1, invoices: d.invoices.filter((x) => x.id !== id) })}
       />
+
+      <ExportSheet open={exportOpen} onClose={() => setExportOpen(false)} count={data?.total ?? 0} busy={exporting} onExport={doExport} />
 
       <ItemPicker open={sheet === 'item'} onClose={() => setSheet(null)} storeId={currentStore} title="فلترة حسب الخدمة/المنتج" onPick={(i) => setParam({ item: String(i.id) })} />
       <ItemPicker

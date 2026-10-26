@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { AlertTriangle, CheckCircle2, FileSpreadsheet, FileDown, Plus, Upload, X } from 'lucide-react'
+import { AlertTriangle, CheckCircle2, FileSpreadsheet, FileDown, Pencil, Plus, Upload, X } from 'lucide-react'
 import { api, errorMessage } from '../api'
 import { useApp } from '../context'
 import { useFeedback } from '../components/Feedback'
@@ -8,8 +8,10 @@ import { InvoiceForm } from '../components/InvoiceForm'
 import { Page, TopBar } from '../components/Layout'
 import { Sheet } from '../components/Sheet'
 import { LogoPicker } from '../components/StoreLogo'
-import { Badge, Button, Card, ColorPicker, Field, Input, Money, Segmented, Select, StoreDot, cx } from '../components/ui'
+import { Badge, Button, Card, ColorPicker, Field, Input, Money, Segmented, Select, StoreDot, Switch, cx } from '../components/ui'
 import type { ParsedFile, ParsedRow } from '../lib/excel'
+import { planUpdate, type RowUpdate } from '../lib/importDiff'
+import type { Invoice } from '../types'
 import { PALETTE } from '../lib/format'
 import type { LogoImage } from '../lib/image'
 import { load, save } from '../lib/storage'
@@ -62,6 +64,9 @@ interface ResolvedRow extends ParsedRow {
   store_id: number | null
   item_id: number | null
   file: string
+  /** Only app-made files (export/template) can update existing invoices; gateway files just skip duplicates. */
+  format: ParsedFile['format']
+  columns: string[]
 }
 
 const BATCH = 200
@@ -78,9 +83,13 @@ function ImportPanel() {
   const [mapping, setMapping] = useState<Record<string, string>>({})
   const [fallbackStore, setFallbackStore] = useState(currentStore ? String(currentStore) : '')
   const [existing, setExisting] = useState<Set<string> | null>(null)
+  /** Current data of the invoices that rows of an edited file point to (by system id or TransactionID). */
+  const [known, setKnown] = useState<Invoice[]>([])
+  const [applyUpdates, setApplyUpdates] = useState(true)
+  const [showAllUpdates, setShowAllUpdates] = useState(false)
   const [stage, setStage] = useState<'pick' | 'review' | 'importing' | 'done'>('pick')
   const [progress, setProgress] = useState({ done: 0, total: 0 })
-  const [result, setResult] = useState({ inserted: 0, skipped: 0 })
+  const [result, setResult] = useState<{ inserted: number; skipped: number; updated: number; failed: { id: number; message: string }[] }>({ inserted: 0, skipped: 0, updated: 0, failed: [] })
   const [newStoreFor, setNewStoreFor] = useState<string | null>(null)
   const [creatingItems, setCreatingItems] = useState(false)
 
@@ -91,12 +100,26 @@ function ImportPanel() {
   }, [stores])
   const storeByName = useMemo(() => new Map(stores.map((s) => [norm(s.name), s.id])), [stores])
 
-  const allRows = useMemo(() => files.flatMap((f) => f.rows.map((r) => ({ ...r, file: f.fileName }))), [files])
+  const allRows = useMemo(() => files.flatMap((f) => f.rows.map((r) => ({ ...r, file: f.fileName, format: f.format, columns: f.columns }))), [files])
+
+  // Rows of an edited export/template that point to an invoice we already have.
+  const matchOf = useMemo(() => {
+    const byId = new Map(known.map((i) => [i.id, i]))
+    const byTxn = new Map(known.filter((i) => i.transaction_id).map((i) => [i.transaction_id!, i]))
+    const m = new Map<(typeof allRows)[number], Invoice>()
+    for (const r of allRows) {
+      if (r.format !== 'template') continue
+      const inv = (r.invoice_id ? byId.get(r.invoice_id) : undefined) ?? byTxn.get(r.transaction_id)
+      if (inv) m.set(r, inv)
+    }
+    return m
+  }, [allRows, known])
 
   // Keys that need the user to pick a store.
   const unknownKeys = useMemo(() => {
     const keys = new Map<string, { label: string; count: number }>()
     for (const r of allRows) {
+      if (matchOf.has(r)) continue
       let key: string | null = null
       if (r.store_name && !storeByName.has(norm(r.store_name))) key = `n:${r.store_name.trim()}`
       else if (!r.store_name && r.terminal_id && !terminalStore.has(r.terminal_id)) key = `t:${r.terminal_id}`
@@ -107,7 +130,7 @@ function ImportPanel() {
       }
     }
     return keys
-  }, [allRows, storeByName, terminalStore])
+  }, [allRows, storeByName, terminalStore, matchOf])
 
   const resolved: ResolvedRow[] = useMemo(
     () =>
@@ -126,43 +149,69 @@ function ImportPanel() {
     [allRows, storeByName, terminalStore, mapping, fallbackStore, items],
   )
 
-  const needsFallback = resolved.some((r) => !r.store_id) || allRows.some((r) => !r.store_name && !r.terminal_id)
-  const missingStore = resolved.filter((r) => !r.store_id).length
+  // Rows that would become new invoices (not a duplicate, not an edit of an existing invoice).
+  const newRows = useMemo(() => resolved.filter((r, i) => !matchOf.has(allRows[i]) && !existing?.has(r.transaction_id)), [resolved, allRows, matchOf, existing])
+  const needsFallback = newRows.some((r) => !r.store_id) || allRows.some((r) => !matchOf.has(r) && !r.store_name && !r.terminal_id)
+  const missingStore = newRows.filter((r) => !r.store_id).length
   const unmatchedItems = useMemo(
-    () => [...new Set(resolved.filter((r) => r.item_name && !r.item_id).map((r) => r.item_name!.trim()))],
-    [resolved],
+    () => [...new Set(newRows.filter((r) => r.item_name && !r.item_id).map((r) => r.item_name!.trim()))],
+    [newRows],
   )
+
+  /** Changes an edited file would make to invoices we already have. */
+  const plans = useMemo(() => {
+    const out: RowUpdate[] = []
+    const warned: RowUpdate[] = []
+    let unchanged = 0
+    allRows.forEach((r) => {
+      const inv = matchOf.get(r)
+      if (!inv) return
+      const newStoreId = r.store_name ? storeByName.get(norm(r.store_name)) ?? null : null
+      const p = planUpdate(r, inv, r.columns, { newStoreId, storeName: (id) => stores.find((s) => s.id === id)?.name ?? '', items })
+      if (p && p.changes.length) out.push(p)
+      else {
+        unchanged++
+        if (p) warned.push(p)
+      }
+    })
+    return { updates: out, unchanged, warned }
+  }, [allRows, matchOf, storeByName, stores, items])
+  const updates = applyUpdates ? plans.updates : []
 
   const summary = useMemo(() => {
     const per = new Map<number, { n: number; dup: number; sum: number }>()
     let dup = 0
-    for (const r of resolved) {
-      if (!r.store_id) continue
-      const e = per.get(r.store_id) ?? { n: 0, dup: 0, sum: 0 }
+    let fresh = 0
+    resolved.forEach((r, i) => {
+      if (matchOf.has(allRows[i])) return
       if (existing?.has(r.transaction_id)) {
-        e.dup++
         dup++
-      } else {
-        e.n++
-        e.sum += r.amount
+        if (r.store_id) per.set(r.store_id, { ...(per.get(r.store_id) ?? { n: 0, dup: 0, sum: 0 }), dup: (per.get(r.store_id)?.dup ?? 0) + 1 })
+        return
       }
+      if (!r.store_id) return
+      const e = per.get(r.store_id) ?? { n: 0, dup: 0, sum: 0 }
+      e.n++
+      e.sum += r.amount
       per.set(r.store_id, e)
-    }
-    const fresh = resolved.length - dup - missingStore
+      fresh++
+    })
     return { per, dup, fresh, sum: [...per.values()].reduce((a, e) => a + e.sum, 0) }
-  }, [resolved, existing, missingStore])
+  }, [resolved, allRows, matchOf, existing])
 
   const pick = async (list: FileList | null) => {
     if (!list?.length) return
     setParsing(true)
     try {
       const { parseExcelFile } = await import('../lib/excel')
-      const parsed = await Promise.all([...list].map((f) => parseExcelFile(f).catch(() => ({ fileName: f.name, format: 'gateway' as const, rows: [], errors: ['تعذّرت قراءة الملف'] }))))
+      const parsed = await Promise.all([...list].map((f) => parseExcelFile(f).catch(() => ({ fileName: f.name, format: 'gateway' as const, rows: [], errors: ['تعذّرت قراءة الملف'], columns: [] }))))
       const merged = [...files, ...parsed.filter((p) => !files.some((f) => f.fileName === p.fileName))]
       setFiles(merged)
       const ids = merged.flatMap((f) => f.rows.map((r) => r.transaction_id))
-      const r = await api<{ existing: string[] }>('import/check', { method: 'POST', body: { transaction_ids: ids } })
+      const invIds = merged.flatMap((f) => f.rows.map((r) => r.invoice_id).filter((v): v is number => !!v))
+      const r = await api<{ existing: string[]; invoices: Invoice[] }>('import/check', { method: 'POST', body: { transaction_ids: ids, ids: invIds } })
       setExisting(new Set(r.existing))
+      setKnown(r.invoices)
       setStage('review')
     } catch (e) {
       toast(errorMessage(e), 'error')
@@ -176,6 +225,7 @@ function ImportPanel() {
     setFiles([])
     setMapping({})
     setExisting(null)
+    setKnown([])
     setStage('pick')
   }
 
@@ -197,31 +247,44 @@ function ImportPanel() {
   }
 
   const run = async () => {
-    const rows = resolved.filter((r) => r.store_id && !existing?.has(r.transaction_id))
+    const rows = newRows.filter((r) => r.store_id)
+    const toUpdate = updates
+    const fileName = files.map((f) => f.fileName).join('، ').slice(0, 120)
     setStage('importing')
-    setProgress({ done: 0, total: rows.length })
+    setProgress({ done: 0, total: rows.length + toUpdate.length })
     const terminals = Object.entries(mapping)
       .filter(([k, v]) => k.startsWith('t:') && v)
       .map(([k, v]) => ({ terminal_id: k.slice(2), store_id: +v }))
     let inserted = 0
     let skipped = 0
+    let updated = 0
+    const failed: { id: number; message: string }[] = []
     try {
       for (let i = 0; i < rows.length; i += BATCH) {
-        const batch = rows.slice(i, i + BATCH).map(({ file: _f, store_name: _s, item_name: _i, ...r }) => r)
+        const batch = rows.slice(i, i + BATCH).map(({ file: _f, format: _fm, columns: _c, store_name: _s, item_name: _i, item_raw: _ir, invoice_id: _id, ...r }) => r)
         const r = await api<{ inserted: number; skipped: number }>('import', {
           method: 'POST',
-          body: { rows: batch, terminals: i === 0 ? terminals : [], file_name: files.map((f) => f.fileName).join('، ').slice(0, 120) },
+          body: { rows: batch, terminals: i === 0 ? terminals : [], file_name: fileName },
         })
         inserted += r.inserted
         skipped += r.skipped
-        setProgress({ done: Math.min(i + BATCH, rows.length), total: rows.length })
+        setProgress({ done: Math.min(i + BATCH, rows.length), total: rows.length + toUpdate.length })
       }
-      setResult({ inserted, skipped: skipped + summary.dup })
+      for (let i = 0; i < toUpdate.length; i += BATCH) {
+        const r = await api<{ updated: number; errors: { id: number; message: string }[] }>('import/update', {
+          method: 'POST',
+          body: { rows: toUpdate.slice(i, i + BATCH).map((u) => u.payload), file_name: fileName },
+        })
+        updated += r.updated
+        failed.push(...r.errors)
+        setProgress({ done: rows.length + Math.min(i + BATCH, toUpdate.length), total: rows.length + toUpdate.length })
+      }
+      setResult({ inserted, skipped: skipped + summary.dup, updated, failed })
       setStage('done')
       if (terminals.length) reloadStores()
     } catch (e) {
       toast(errorMessage(e), 'error')
-      setResult({ inserted, skipped })
+      setResult({ inserted, skipped, updated, failed })
       setStage('review')
     }
   }
@@ -232,17 +295,47 @@ function ImportPanel() {
         <CheckCircle2 className="mx-auto size-14 text-success" />
         <p className="mt-3 text-[20px] font-bold">تم الاستيراد</p>
         <p className="mt-1 text-[16px] text-muted">
-          أُضيفت <span className="num font-semibold text-fg">{result.inserted}</span> فاتورة
+          {result.inserted > 0 && (
+            <>
+              أُضيفت <span className="num font-semibold text-fg">{result.inserted}</span> فاتورة
+            </>
+          )}
+          {result.inserted > 0 && result.updated > 0 && ' · '}
+          {result.updated > 0 && (
+            <>
+              تم تحديث <span className="num font-semibold text-fg">{result.updated}</span> فاتورة
+            </>
+          )}
+          {result.inserted === 0 && result.updated === 0 && 'لا توجد تغييرات'}
           {result.skipped > 0 && (
             <>
               {' '}· تم تجاهل <span className="num">{result.skipped}</span> مكررة
             </>
           )}
         </p>
+        {result.failed.length > 0 && (
+          <div className="mt-4 rounded-2xl bg-danger-soft p-3 text-start text-[14px] text-danger">
+            <p className="font-semibold">تعذّر تحديث {result.failed.length} فاتورة:</p>
+            <ul className="mt-1 list-disc space-y-0.5 ps-5">
+              {result.failed.slice(0, 8).map((f) => (
+                <li key={f.id}>
+                  #<span className="num">{f.id}</span>: {f.message}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
         <div className="mt-6 space-y-3">
-          <Button block size="lg" onClick={() => navigate('/invoices?unclassified=1&source=import')}>
-            حدد الخدمة/المنتج للفواتير الجديدة
-          </Button>
+          {result.inserted > 0 && (
+            <Button block size="lg" onClick={() => navigate('/invoices?unclassified=1&source=import')}>
+              حدد الخدمة/المنتج للفواتير الجديدة
+            </Button>
+          )}
+          {result.inserted === 0 && (
+            <Button block size="lg" onClick={() => navigate('/invoices')}>
+              عرض الفواتير
+            </Button>
+          )}
           <Button block variant="secondary" onClick={reset}>
             استيراد ملف آخر
           </Button>
@@ -271,7 +364,7 @@ function ImportPanel() {
               <Upload className="size-8" />
             </span>
             <span className="mt-4 text-[18px] font-bold">{parsing ? 'جاري قراءة الملفات…' : 'اختر ملفات Excel'}</span>
-            <span className="mt-1 max-w-xs text-[15px] text-muted">ملفات بوابة الدفع (Checkouts Paid) أو قالب النظام. يمكنك اختيار أكثر من ملف</span>
+            <span className="mt-1 max-w-xs text-[15px] text-muted">ملفات بوابة الدفع (Checkouts Paid) أو قالب النظام. لتعديل فواتير موجودة: صدّر الفواتير، عدّل الخلايا، ثم ارفع الملف هنا</span>
           </button>
           <Card>
             <div className="flex items-start gap-3">
@@ -385,9 +478,10 @@ function ImportPanel() {
 
           <Card>
             <p className="mb-3 text-[16px] font-semibold">ملخص الاستيراد</p>
-            <div className="grid grid-cols-3 gap-2 text-center">
+            <div className={cx('grid gap-2 text-center', plans.updates.length ? 'grid-cols-2 sm:grid-cols-4' : 'grid-cols-3')}>
               <Stat label="جديدة" value={summary.fresh} tone="success" />
-              <Stat label="مكررة (تُتجاهل)" value={summary.dup} />
+              {plans.updates.length > 0 && <Stat label="ستُحدَّث" value={updates.length} tone="primary" />}
+              <Stat label={plans.updates.length || plans.unchanged ? 'بدون تغيير / مكررة' : 'مكررة (تُتجاهل)'} value={summary.dup + plans.unchanged + (applyUpdates ? 0 : plans.updates.length)} />
               <Stat label="بدون متجر" value={missingStore} tone={missingStore ? 'warn' : undefined} />
             </div>
             <div className="mt-3 space-y-1.5">
@@ -409,6 +503,51 @@ function ImportPanel() {
             </div>
           </Card>
 
+          {plans.warned.length > 0 && (
+            <Card>
+              <div className="flex items-start gap-3">
+                <AlertTriangle className="mt-0.5 size-5 shrink-0 text-warn" />
+                <div className="min-w-0 flex-1">
+                  <p className="text-[15px] font-semibold">
+                    <span className="num">{plans.warned.length}</span> فاتورة بها خلايا لا يمكن تطبيقها
+                  </p>
+                  <div className="mt-2 space-y-2">
+                    {plans.warned.slice(0, 5).map((u) => (
+                      <UpdateRow key={u.invoice.id} update={u} />
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </Card>
+          )}
+
+          {plans.updates.length > 0 && (
+            <Card>
+              <div className="flex items-start gap-3">
+                <Pencil className="mt-0.5 size-5 shrink-0 text-primary" />
+                <div className="min-w-0 flex-1">
+                  <p className="text-[16px] font-semibold">
+                    تعديلات على <span className="num">{plans.updates.length}</span> فاتورة موجودة
+                  </p>
+                  <p className="text-[13px] text-muted">الخلايا التي تغيّرت في الملف مقارنةً بالبيانات الحالية. الفواتير بدون تغيير لا تُلمس.</p>
+                </div>
+              </div>
+              <div className="mt-3 space-y-2">
+                {plans.updates.slice(0, 5).map((u) => (
+                  <UpdateRow key={u.invoice.id} update={u} />
+                ))}
+              </div>
+              {plans.updates.length > 5 && (
+                <Button variant="ghost" size="sm" className="mt-2" onClick={() => setShowAllUpdates(true)}>
+                  عرض كل التعديلات ({plans.updates.length})
+                </Button>
+              )}
+              <div className="mt-2 border-t border-line pt-1">
+                <Switch checked={applyUpdates} onChange={setApplyUpdates} label="تطبيق هذه التعديلات" />
+              </div>
+            </Card>
+          )}
+
           {stage === 'importing' ? (
             <Card>
               <p className="mb-2 text-[15px] font-semibold">
@@ -420,8 +559,11 @@ function ImportPanel() {
             </Card>
           ) : (
             <div className="flex gap-3">
-              <Button size="lg" block disabled={!summary.fresh} onClick={run}>
-                استيراد {summary.fresh} فاتورة
+              <Button size="lg" block disabled={!summary.fresh && !updates.length} onClick={run}>
+                {summary.fresh > 0 && `استيراد ${summary.fresh} فاتورة`}
+                {summary.fresh > 0 && updates.length > 0 && ' و'}
+                {updates.length > 0 && `تحديث ${updates.length} فاتورة`}
+                {!summary.fresh && !updates.length && 'لا توجد تغييرات للاستيراد'}
               </Button>
               <Button size="lg" variant="secondary" onClick={reset}>
                 إلغاء
@@ -430,6 +572,14 @@ function ImportPanel() {
           )}
         </>
       )}
+
+      <Sheet open={showAllUpdates} onClose={() => setShowAllUpdates(false)} title={`التعديلات (${plans.updates.length})`}>
+        <div className="space-y-2">
+          {plans.updates.map((u) => (
+            <UpdateRow key={u.invoice.id} update={u} />
+          ))}
+        </div>
+      </Sheet>
 
       <NewStoreSheet
         open={!!newStoreFor}
@@ -445,10 +595,37 @@ function ImportPanel() {
   )
 }
 
-function Stat({ label, value, tone }: { label: string; value: number; tone?: 'success' | 'warn' }) {
+/** One invoice with the cells that changed: old value struck through, new value next to it. */
+function UpdateRow({ update }: { update: RowUpdate }) {
+  const { invoice, changes, warnings } = update
   return (
-    <div className={cx('rounded-2xl px-2 py-3', tone === 'success' ? 'bg-success-soft' : tone === 'warn' ? 'bg-warn-soft' : 'bg-surface-2')}>
-      <p className={cx('num text-[22px] font-bold', tone === 'success' && 'text-success', tone === 'warn' && 'text-warn')}>{value}</p>
+    <div className="rounded-2xl bg-surface-2 px-3 py-2.5 text-[14px]">
+      <p className="font-semibold">
+        {invoice.customer_name || 'بدون اسم'} <span className="num font-normal text-muted">· {invoice.invoice_no ? `#${invoice.invoice_no}` : `معرّف ${invoice.id}`}</span>
+      </p>
+      <ul className="mt-1 space-y-0.5">
+        {changes.map((c) => (
+          <li key={c.field} className="flex flex-wrap items-baseline gap-x-1.5">
+            <span className="text-muted">{c.label}:</span>
+            <span className="text-muted line-through">{c.from}</span>
+            <span className="text-muted">←</span>
+            <span className="font-medium text-primary">{c.to}</span>
+          </li>
+        ))}
+        {warnings.map((w) => (
+          <li key={w} className="text-[13px] text-warn">
+            {w}
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
+}
+
+function Stat({ label, value, tone }: { label: string; value: number; tone?: 'success' | 'warn' | 'primary' }) {
+  return (
+    <div className={cx('rounded-2xl px-2 py-3', tone === 'success' ? 'bg-success-soft' : tone === 'warn' ? 'bg-warn-soft' : tone === 'primary' ? 'bg-primary-soft' : 'bg-surface-2')}>
+      <p className={cx('num text-[22px] font-bold', tone === 'success' && 'text-success', tone === 'warn' && 'text-warn', tone === 'primary' && 'text-primary')}>{value}</p>
       <p className="text-[12px] text-muted">{label}</p>
     </div>
   )

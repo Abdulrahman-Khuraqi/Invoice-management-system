@@ -22,7 +22,11 @@ export interface ParsedRow {
   /** Template/export files only: */
   store_name: string | null
   item_name: string | null
+  /** The whole service/product cell (exports join several names with "، "). */
+  item_raw: string | null
   note: string | null
+  /** System id from an exported file; lets a re-uploaded file update that invoice. */
+  invoice_id: number | null
 }
 
 export interface ParsedFile {
@@ -30,6 +34,8 @@ export interface ParsedFile {
   format: 'gateway' | 'template'
   rows: ParsedRow[]
   errors: string[]
+  /** Columns present in a template/export file (as ParsedRow field names, plus 'item'): only these may update invoices. */
+  columns: string[]
 }
 
 // Column headers of the app's own template/export (Arabic) and the payment gateway export.
@@ -50,7 +56,15 @@ const TEMPLATE_COLUMNS = {
   ref: 'الرقم المرجعي',
   auth: 'رمز التفويض',
   terminal: 'رقم الجهاز',
+  id: 'معرّف النظام',
 } as const
+
+/** Template column -> the invoice field it edits. */
+const COLUMN_FIELDS: [keyof typeof TEMPLATE_COLUMNS, string][] = [
+  ['store', 'store_id'], ['date', 'paid_at'], ['amount', 'amount'], ['customer', 'customer_name'], ['phone', 'phone'],
+  ['email', 'email'], ['invoiceNo', 'invoice_no'], ['payMethod', 'pay_method'], ['item', 'item'], ['note', 'note'],
+  ['cardType', 'card_type'], ['last4', 'card_last4'], ['ref', 'reference_no'], ['auth', 'auth_code'],
+]
 
 const pad = (n: number) => String(n).padStart(2, '0')
 
@@ -82,6 +96,11 @@ function cellMoney(v: unknown): number | null {
   return null
 }
 
+function cellId(v: unknown): number | null {
+  const n = typeof v === 'number' ? v : parseInt(toLatinDigits(String(v ?? '')).trim(), 10)
+  return Number.isInteger(n) && n > 0 ? n : null
+}
+
 function cellStr(v: unknown): string | null {
   if (v === null || v === undefined) return null
   if (v instanceof Date) return cellDate(v)
@@ -111,7 +130,7 @@ export async function parseExcelFile(file: File): Promise<ParsedFile> {
 export function parseWorkbook(data: ArrayBuffer | Uint8Array, fileName: string): ParsedFile {
   const wb = XLSX.read(data, { type: 'array', cellDates: true })
   const sheet = wb.Sheets[wb.SheetNames[0]]
-  if (!sheet) return { fileName, format: 'gateway', rows: [], errors: ['الملف فارغ'] }
+  if (!sheet) return { fileName, format: 'gateway', rows: [], errors: ['الملف فارغ'], columns: [] }
   const records = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { defval: null, raw: true })
   const headers = Object.keys(records[0] ?? {})
 
@@ -119,13 +138,14 @@ export function parseWorkbook(data: ArrayBuffer | Uint8Array, fileName: string):
     return parseGateway(records, fileName)
   }
   if (headers.includes(TEMPLATE_COLUMNS.amount) && headers.includes(TEMPLATE_COLUMNS.date)) {
-    return parseTemplate(records, fileName)
+    return parseTemplate(records, fileName, headers)
   }
   return {
     fileName,
     format: 'gateway',
     rows: [],
     errors: ['صيغة الملف غير معروفة. استخدم ملف بوابة الدفع (Checkouts) أو قالب Excel الخاص بالنظام'],
+    columns: [],
   }
 }
 
@@ -157,13 +177,15 @@ function parseGateway(records: Record<string, unknown>[], fileName: string): Par
       paid_at: cellDate(r.PaidDate) ?? cellDate(r.CreateDate),
       store_name: null,
       item_name: null,
+      item_raw: null,
       note: null,
+      invoice_id: null,
     })
   })
-  return { fileName, format: 'gateway', rows, errors }
+  return { fileName, format: 'gateway', rows, errors, columns: [] }
 }
 
-function parseTemplate(records: Record<string, unknown>[], fileName: string): ParsedFile {
+function parseTemplate(records: Record<string, unknown>[], fileName: string, headers: string[]): ParsedFile {
   const C = TEMPLATE_COLUMNS
   const rows: ParsedRow[] = []
   const errors: string[] = []
@@ -203,10 +225,13 @@ function parseTemplate(records: Record<string, unknown>[], fileName: string): Pa
       store_name: store,
       // Exports list several items joined with "، "; only the first is matched on import.
       item_name: cellStr(r[C.item])?.split('، ')[0] ?? null,
+      item_raw: cellStr(r[C.item]),
       note: cellStr(r[C.note]),
+      invoice_id: cellId(r[C.id]),
     })
   })
-  return { fileName, format: 'template', rows, errors }
+  const columns = COLUMN_FIELDS.filter(([k]) => headers.includes(C[k])).map(([, f]) => f)
+  return { fileName, format: 'template', rows, errors, columns }
 }
 
 function saveWorkbook(wb: XLSX.WorkBook, fileName: string) {
@@ -220,32 +245,57 @@ function sheetFrom(rows: Record<string, unknown>[], widths: number[]) {
   return ws
 }
 
-/** Exports invoices with the template's columns, so the file can be edited and re-imported. */
-export function exportInvoices(invoices: Invoice[], fileName: string) {
-  const C = TEMPLATE_COLUMNS
-  const rows = invoices.map((inv) => ({
-    [C.store]: inv.store_name,
-    [C.date]: inv.paid_at ?? inv.created_at,
-    [C.amount]: inv.amount,
-    [C.customer]: inv.customer_name ?? '',
-    [C.phone]: inv.phone ?? '',
-    [C.email]: inv.email ?? '',
-    [C.invoiceNo]: inv.invoice_no ?? '',
-    [C.payMethod]: inv.pay_method ? payLabel(inv.pay_method) : '',
-    [C.item]: inv.lines.map((l) => l.name).join('، '),
-    'النوع': [...new Set(inv.lines.map((l) => KIND_LABELS[l.kind]))].join('، '),
-    'التصنيف': [...new Set(inv.lines.map((l) => l.category_name).filter(Boolean))].join('، '),
-    [C.note]: inv.note ?? '',
-    [C.cardType]: inv.card_type ?? '',
-    [C.last4]: inv.card_last4 ?? '',
-    [C.txn]: inv.transaction_id ?? '',
-    [C.ref]: inv.reference_no ?? '',
-    [C.auth]: inv.auth_code ?? '',
-    [C.terminal]: inv.terminal_id ?? '',
-    'المصدر': inv.source === 'import' ? 'استيراد' : 'يدوي',
-  }))
+export interface ExportColumn {
+  key: string
+  label: string
+  width: number
+  value: (inv: Invoice) => string | number
+}
+
+/** Every column the invoice export can contain, in file order. */
+export const EXPORT_COLUMNS: ExportColumn[] = [
+  { key: 'store', label: TEMPLATE_COLUMNS.store, width: 16, value: (i) => i.store_name },
+  { key: 'date', label: TEMPLATE_COLUMNS.date, width: 20, value: (i) => i.paid_at ?? i.created_at },
+  { key: 'amount', label: TEMPLATE_COLUMNS.amount, width: 12, value: (i) => i.amount },
+  { key: 'customer', label: TEMPLATE_COLUMNS.customer, width: 24, value: (i) => i.customer_name ?? '' },
+  { key: 'phone', label: TEMPLATE_COLUMNS.phone, width: 16, value: (i) => i.phone ?? '' },
+  { key: 'email', label: TEMPLATE_COLUMNS.email, width: 24, value: (i) => i.email ?? '' },
+  { key: 'invoiceNo', label: TEMPLATE_COLUMNS.invoiceNo, width: 12, value: (i) => i.invoice_no ?? '' },
+  { key: 'payMethod', label: TEMPLATE_COLUMNS.payMethod, width: 12, value: (i) => (i.pay_method ? payLabel(i.pay_method) : '') },
+  { key: 'item', label: TEMPLATE_COLUMNS.item, width: 24, value: (i) => i.lines.map((l) => l.name).join('، ') },
+  { key: 'kind', label: 'النوع', width: 10, value: (i) => [...new Set(i.lines.map((l) => KIND_LABELS[l.kind]))].join('، ') },
+  { key: 'category', label: 'التصنيف', width: 14, value: (i) => [...new Set(i.lines.map((l) => l.category_name).filter(Boolean))].join('، ') },
+  { key: 'note', label: TEMPLATE_COLUMNS.note, width: 30, value: (i) => i.note ?? '' },
+  { key: 'cardType', label: TEMPLATE_COLUMNS.cardType, width: 12, value: (i) => i.card_type ?? '' },
+  { key: 'last4', label: TEMPLATE_COLUMNS.last4, width: 10, value: (i) => i.card_last4 ?? '' },
+  { key: 'txn', label: TEMPLATE_COLUMNS.txn, width: 34, value: (i) => i.transaction_id ?? '' },
+  { key: 'ref', label: TEMPLATE_COLUMNS.ref, width: 16, value: (i) => i.reference_no ?? '' },
+  { key: 'auth', label: TEMPLATE_COLUMNS.auth, width: 12, value: (i) => i.auth_code ?? '' },
+  { key: 'terminal', label: TEMPLATE_COLUMNS.terminal, width: 16, value: (i) => i.terminal_id ?? '' },
+  { key: 'source', label: 'المصدر', width: 8, value: (i) => (i.source === 'import' ? 'استيراد' : 'يدوي') },
+  // Lets the file be edited and uploaded again to update these invoices.
+  { key: 'id', label: TEMPLATE_COLUMNS.id, width: 12, value: (i) => i.id },
+]
+
+export const ALL_EXPORT_KEYS = EXPORT_COLUMNS.map((c) => c.key)
+
+/**
+ * Exports invoices. With no `keys` every column is written (the file can be edited and uploaded again to update
+ * the invoices); otherwise only the chosen columns, optionally with a totals row.
+ */
+export function exportInvoices(invoices: Invoice[], fileName: string, opts: { keys?: string[]; totalRow?: boolean } = {}) {
+  const cols = EXPORT_COLUMNS.filter((c) => !opts.keys || opts.keys.includes(c.key))
+  const rows: Record<string, unknown>[] = invoices.map((inv) => Object.fromEntries(cols.map((c) => [c.label, c.value(inv)])))
+  const amountCol = cols.find((c) => c.key === 'amount')
+  if (opts.totalRow && amountCol && cols.length > 0) {
+    const total: Record<string, unknown> = Object.fromEntries(cols.map((c) => [c.label, '']))
+    const first = cols.find((c) => c.key !== 'amount')
+    if (first) total[first.label] = `المجموع (${invoices.length})`
+    total[amountCol.label] = Math.round(invoices.reduce((a, i) => a + i.amount, 0) * 100) / 100
+    rows.push(total)
+  }
   const wb = XLSX.utils.book_new()
-  XLSX.utils.book_append_sheet(wb, sheetFrom(rows, [16, 20, 12, 24, 16, 24, 12, 12, 24, 10, 14, 30, 12, 10, 34, 16, 12, 16, 8]), 'الفواتير')
+  XLSX.utils.book_append_sheet(wb, sheetFrom(rows, cols.map((c) => c.width)), 'الفواتير')
   saveWorkbook(wb, fileName)
 }
 

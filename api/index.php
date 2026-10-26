@@ -55,6 +55,7 @@ const ROUTES = [
     ['DELETE', 'invoices/(\d+)', 'invoices_delete'],
     ['POST', 'import/check', 'import_check'],
     ['POST', 'import', 'import_rows'],
+    ['POST', 'import/update', 'import_update'],
 
     ['GET', 'stats', 'stats_get'],
 
