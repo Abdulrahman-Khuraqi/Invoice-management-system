@@ -98,7 +98,7 @@ function InfoRow({ icon, label, children, copy, href }: { icon: ReactNode; label
 export function StoreInfoCard({ store }: { store: Store }) {
   const i = store.info
   return (
-    <Card className="mt-3 lg:mt-4">
+    <Card>
       <div className="flex items-center gap-3 border-b border-line pb-3">
         <StoreAvatar name={store.name} color={store.color} src={storeLogoUrl(store)} bg={store.logo_bg} className="size-12" />
         <div className="min-w-0 flex-1">

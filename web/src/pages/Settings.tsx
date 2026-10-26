@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ChevronLeft, History, KeyRound, LogOut, Monitor, Moon, Package, Smartphone, Store as StoreIcon, Sun, Users } from 'lucide-react'
+import { ChevronLeft, History, Info, KeyRound, LogOut, Monitor, Moon, Package, Smartphone, Store as StoreIcon, Sun, Users } from 'lucide-react'
 import { api, errorMessage } from '../api'
 import { useApp } from '../context'
 import { useFeedback } from '../components/Feedback'
@@ -63,6 +63,7 @@ export default function Settings() {
         <SectionTitle className="lg:mt-0">إدارة النظام</SectionTitle>
         <Group>
           {can('admin') && <Item icon={<StoreIcon />} label="المتاجر" value={String(stores.filter((s) => s.is_active).length)} onClick={() => navigate('/settings/stores')} />}
+          <Item icon={<Info />} label="معلومات المتاجر" onClick={() => navigate('/settings/store-info')} />
           <Item icon={<Package />} label="الخدمات والمنتجات" value={String(items.filter((i) => i.is_active).length)} onClick={() => navigate('/settings/catalog')} />
           {can('admin') && <Item icon={<Users />} label="المستخدمون والصلاحيات" onClick={() => navigate('/settings/users')} />}
           {can('admin') && <Item icon={<History />} label="سجل النشاط" onClick={() => navigate('/settings/activity')} />}
