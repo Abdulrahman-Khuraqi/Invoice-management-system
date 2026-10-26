@@ -11,8 +11,12 @@ import '@fontsource/ibm-plex-sans-arabic/latin-700.css'
 import './index.css'
 import App from './App'
 import { FeedbackProvider } from './components/Feedback'
+import { dir, isEn, lang, t } from './lib/i18n'
 import { applyTheme, watchSystemTheme } from './lib/theme'
 
+document.documentElement.lang = lang
+document.documentElement.dir = dir
+document.title = isEn ? t('إدارة الفواتير') : document.title
 applyTheme()
 watchSystemTheme()
 

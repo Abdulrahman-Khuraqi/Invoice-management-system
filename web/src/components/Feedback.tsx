@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import { AlertTriangle, CheckCircle2, Info } from 'lucide-react'
 import { Sheet } from './Sheet'
 import { Button } from './ui'
+import { t } from '../lib/i18n'
 
 type ToastKind = 'success' | 'error' | 'info'
 interface ConfirmOpts {
@@ -67,10 +68,11 @@ export function FeedbackProvider({ children }: { children: ReactNode }) {
         footer={
           <div className="flex gap-3">
             <Button variant={dialog?.danger ? 'danger' : 'primary'} block onClick={() => close(true)}>
-              {dialog?.confirmLabel ?? 'تأكيد'}
+              {dialog?.confirmLabel ?? t('تأكيد')}
             </Button>
             <Button variant="secondary" block onClick={() => close(false)}>
-              إلغاء
+              
+              {t('إلغاء')}
             </Button>
           </div>
         }

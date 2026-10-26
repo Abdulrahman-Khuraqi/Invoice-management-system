@@ -7,6 +7,7 @@ import type { Invoice, ItemKind } from '../types'
 import { useFeedback } from './Feedback'
 import { ItemPicker } from './ItemPicker'
 import { Button, Field, IconButton, Input, Select, Textarea, cx } from './ui'
+import { t } from '../lib/i18n'
 
 interface Line {
   item_id: number
@@ -65,9 +66,9 @@ export function InvoiceForm({ initial, onSaved, onCancel }: { initial?: Invoice;
 
   const submit = async () => {
     const errs: Record<string, string> = {}
-    if (!f.store_id) errs.store_id = 'اختر المتجر'
-    if (!f.amount.trim() || amount <= 0) errs.amount = 'أدخل المبلغ'
-    if (!f.paid_at) errs.paid_at = 'اختر التاريخ'
+    if (!f.store_id) errs.store_id = t('اختر المتجر')
+    if (!f.amount.trim() || amount <= 0) errs.amount = t('أدخل المبلغ')
+    if (!f.paid_at) errs.paid_at = t('اختر التاريخ')
     setErrors(errs)
     if (Object.keys(errs).length) return
 
@@ -86,7 +87,7 @@ export function InvoiceForm({ initial, onSaved, onCancel }: { initial?: Invoice;
       const r = initial
         ? await api<{ invoice: Invoice }>(`invoices/${initial.id}`, { method: 'PUT', body })
         : await api<{ invoice: Invoice }>('invoices', { method: 'POST', body })
-      toast(initial ? 'تم حفظ التعديلات' : 'تمت إضافة الفاتورة')
+      toast(initial ? t('تم حفظ التعديلات') : t('تمت إضافة الفاتورة'))
       onSaved(r.invoice)
     } catch (e) {
       toast(errorMessage(e), 'error')
@@ -99,10 +100,10 @@ export function InvoiceForm({ initial, onSaved, onCancel }: { initial?: Invoice;
   return (
     <div className="@container">
     <div className="space-y-4 @2xl:grid @2xl:grid-cols-2 @2xl:gap-x-5 @2xl:gap-y-4 @2xl:space-y-0">
-      <Field label="المتجر" required error={errors.store_id} className="@2xl:order-1">
+      <Field label={t('المتجر')} required error={errors.store_id} className="@2xl:order-1">
         <Select value={f.store_id} onChange={set('store_id')}>
-          <option value="">اختر المتجر…</option>
-          {archivedStore && <option value={archivedStore.id}>{archivedStore.name} (مؤرشف)</option>}
+          <option value="">{t('اختر المتجر…')}</option>
+          {archivedStore && <option value={archivedStore.id}>{archivedStore.name}  {t('(مؤرشف)')}</option>}
           {activeStores.map((s) => (
             <option key={s.id} value={s.id}>
               {s.name}
@@ -111,10 +112,10 @@ export function InvoiceForm({ initial, onSaved, onCancel }: { initial?: Invoice;
         </Select>
       </Field>
 
-      <Field label="المبلغ (ر.س)" required error={errors.amount} className="@2xl:order-2">
+      <Field label={t('المبلغ (ر.س)')} required error={errors.amount} className="@2xl:order-2">
         <Input inputMode="decimal" value={f.amount} onChange={set('amount')} placeholder="0.00" className="num text-end text-[20px] font-semibold" />
       </Field>
-      <Field label="التاريخ والوقت" required error={errors.paid_at} className="@2xl:order-3">
+      <Field label={t('التاريخ والوقت')} required error={errors.paid_at} className="@2xl:order-3">
         <Input type="datetime-local" value={f.paid_at} onChange={set('paid_at')} className="num text-end" />
       </Field>
 
@@ -122,16 +123,18 @@ export function InvoiceForm({ initial, onSaved, onCancel }: { initial?: Invoice;
       <div className="rounded-3xl border border-line bg-surface-2/50 p-4 @2xl:order-5 @2xl:col-span-2">
         <div className="mb-3 flex items-center justify-between">
           <div>
-            <p className="text-[16px] font-semibold">الخدمة / المنتج</p>
-            <p className="text-[13px] text-muted">لماذا هذه الفاتورة؟</p>
+            <p className="text-[16px] font-semibold">{t('الخدمة / المنتج')}</p>
+            <p className="text-[13px] text-muted">{t('لماذا هذه الفاتورة؟')}</p>
           </div>
           <Button size="sm" variant="soft" icon={<Plus className="size-4" />} onClick={() => setPicker(true)}>
-            إضافة
+            
+            {t('إضافة')}
           </Button>
         </div>
         {lines.length === 0 && (
           <button onClick={() => setPicker(true)} className="w-full rounded-2xl border border-dashed border-warn/50 bg-warn-soft px-4 py-3.5 text-[15px] font-medium text-warn">
-            لم تُحدد بعد — اضغط لاختيار خدمة أو منتج
+            
+            {t('لم تُحدد بعد — اضغط لاختيار خدمة أو منتج')}
           </button>
         )}
         <div className="space-y-2">
@@ -142,7 +145,7 @@ export function InvoiceForm({ initial, onSaved, onCancel }: { initial?: Invoice;
                   {l.kind === 'service' ? <Wrench className="size-4" /> : <Package className="size-4" />}
                 </span>
                 <span className="min-w-0 flex-1 truncate text-[16px] font-semibold">{l.name}</span>
-                <IconButton label="حذف البند" onClick={() => setLines((ls) => ls.filter((_, i) => i !== idx))} className="size-9 text-danger">
+                <IconButton label={t('حذف البند')} onClick={() => setLines((ls) => ls.filter((_, i) => i !== idx))} className="size-9 text-danger">
                   <Trash2 className="size-5" />
                 </IconButton>
               </div>
@@ -150,18 +153,18 @@ export function InvoiceForm({ initial, onSaved, onCancel }: { initial?: Invoice;
                 <div className="mt-2 grid grid-cols-2 gap-2">
                   <Input
                     inputMode="decimal"
-                    aria-label="الكمية"
+                    aria-label={t('الكمية')}
                     value={l.qty}
                     onChange={(e) => setLines((ls) => ls.map((x, i) => (i === idx ? { ...x, qty: e.target.value } : x)))}
-                    placeholder="الكمية"
+                    placeholder={t('الكمية')}
                     className="num h-11 text-end"
                   />
                   <Input
                     inputMode="decimal"
-                    aria-label="السعر"
+                    aria-label={t('السعر')}
                     value={l.unit_price}
                     onChange={(e) => setLines((ls) => ls.map((x, i) => (i === idx ? { ...x, unit_price: e.target.value } : x)))}
-                    placeholder="السعر"
+                    placeholder={t('السعر')}
                     className="num h-11 text-end"
                   />
                 </div>
@@ -171,23 +174,24 @@ export function InvoiceForm({ initial, onSaved, onCancel }: { initial?: Invoice;
         </div>
         {mismatch && (
           <p className="mt-2 text-[13px] text-warn">
-            مجموع البنود {money(linesTotal)} لا يساوي مبلغ الفاتورة {money(amount)}
+            
+            {t('مجموع البنود {0} لا يساوي مبلغ الفاتورة {1}', money(linesTotal), money(amount))}
           </p>
         )}
       </div>
 
-      <Field label="اسم العميل" className="@2xl:order-6 @2xl:col-span-2">
+      <Field label={t('اسم العميل')} className="@2xl:order-6 @2xl:col-span-2">
         <Input value={f.customer_name} onChange={set('customer_name')} autoComplete="off" />
       </Field>
       <div className="grid grid-cols-2 gap-3 @2xl:contents">
-        <Field label="الجوال" className="@2xl:order-7">
+        <Field label={t('الجوال')} className="@2xl:order-7">
           <Input type="tel" inputMode="tel" value={f.phone} onChange={set('phone')} className="num text-end" />
         </Field>
-        <Field label="رقم الفاتورة" className="@2xl:order-8">
+        <Field label={t('رقم الفاتورة')} className="@2xl:order-8">
           <Input value={f.invoice_no} onChange={set('invoice_no')} className="num text-end" />
         </Field>
       </div>
-      <Field label="طريقة الدفع" className="@2xl:order-4">
+      <Field label={t('طريقة الدفع')} className="@2xl:order-4">
         <Select value={f.pay_method} onChange={set('pay_method')}>
           <option value="">—</option>
           {Object.entries(PAY_METHODS).map(([v, l]) => (
@@ -197,30 +201,31 @@ export function InvoiceForm({ initial, onSaved, onCancel }: { initial?: Invoice;
           ))}
         </Select>
       </Field>
-      <Field label="ملاحظة" className="@2xl:order-9 @2xl:col-span-2">
-        <Textarea value={f.note} onChange={set('note')} placeholder="ملاحظات للمتابعة لاحقاً…" />
+      <Field label={t('ملاحظة')} className="@2xl:order-9 @2xl:col-span-2">
+        <Textarea value={f.note} onChange={set('note')} placeholder={t('ملاحظات للمتابعة لاحقاً…')} />
       </Field>
 
       <button type="button" onClick={() => setMore((m) => !m)} className="flex h-11 items-center gap-1 text-[15px] font-semibold text-primary @2xl:order-10 @2xl:col-span-2 @2xl:justify-self-start">
         <ChevronDown className={cx('size-5 transition', more && 'rotate-180')} />
-        تفاصيل إضافية
+        
+        {t('تفاصيل إضافية')}
       </button>
       {more && (
         <div className="space-y-4 @2xl:order-10 @2xl:col-span-2">
-          <Field label="الإيميل">
+          <Field label={t('الإيميل')}>
             <Input type="email" value={f.email} onChange={set('email')} className="num text-end" />
           </Field>
           <div className="grid grid-cols-2 gap-3">
-            <Field label="نوع البطاقة">
+            <Field label={t('نوع البطاقة')}>
               <Input value={f.card_type} onChange={set('card_type')} placeholder="Visa / Mada" />
             </Field>
-            <Field label="آخر 4 أرقام">
+            <Field label={t('آخر 4 أرقام')}>
               <Input inputMode="numeric" maxLength={4} value={f.card_last4} onChange={set('card_last4')} className="num text-end" />
             </Field>
-            <Field label="الرقم المرجعي">
+            <Field label={t('الرقم المرجعي')}>
               <Input value={f.reference_no} onChange={set('reference_no')} className="num text-end" />
             </Field>
-            <Field label="رمز التفويض">
+            <Field label={t('رمز التفويض')}>
               <Input value={f.auth_code} onChange={set('auth_code')} className="num text-end" />
             </Field>
           </div>
@@ -229,11 +234,12 @@ export function InvoiceForm({ initial, onSaved, onCancel }: { initial?: Invoice;
 
       <div className="flex gap-3 pt-2 @2xl:order-last @2xl:col-span-2 @2xl:justify-start [&>button]:@2xl:w-56 [&>button]:@2xl:flex-none">
         <Button size="lg" block loading={saving} onClick={submit}>
-          {initial ? 'حفظ التعديلات' : 'حفظ الفاتورة'}
+          {initial ? t('حفظ التعديلات') : t('حفظ الفاتورة')}
         </Button>
         {onCancel && (
           <Button size="lg" variant="secondary" onClick={onCancel}>
-            إلغاء
+            
+            {t('إلغاء')}
           </Button>
         )}
       </div>

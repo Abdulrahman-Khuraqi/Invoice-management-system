@@ -1,3 +1,4 @@
+import { t } from './i18n'
 export interface LogoImage {
   dataUrl: string
   /** Backdrop to show behind the logo: light logos (e.g. off-white wordmarks) need a dark one. */
@@ -10,7 +11,7 @@ const SVG_FALLBACK = 512
 async function sizedSvgUrl(file: File, max: number): Promise<{ url: string; w: number; h: number }> {
   const doc = new DOMParser().parseFromString(await file.text(), 'image/svg+xml')
   const root = doc.documentElement
-  if (root.nodeName.toLowerCase() !== 'svg') throw new Error('ملف SVG غير صالح')
+  if (root.nodeName.toLowerCase() !== 'svg') throw new Error(t('ملف SVG غير صالح'))
   const vb = root.getAttribute('viewBox')?.trim().split(/[\s,]+/).map(Number)
   let w = vb && vb.length === 4 ? vb[2] : parseFloat(root.getAttribute('width') ?? '')
   let h = vb && vb.length === 4 ? vb[3] : parseFloat(root.getAttribute('height') ?? '')
@@ -30,7 +31,7 @@ async function sizedSvgUrl(file: File, max: number): Promise<{ url: string; w: n
  */
 export async function fileToLogo(file: File, max = 256): Promise<LogoImage> {
   const isSvg = file.type === 'image/svg+xml' || /\.svg$/i.test(file.name)
-  if (!isSvg && !file.type.startsWith('image/')) throw new Error('اختر صورة بصيغة PNG أو JPG أو WebP أو SVG')
+  if (!isSvg && !file.type.startsWith('image/')) throw new Error(t('اختر صورة بصيغة PNG أو JPG أو WebP أو SVG'))
 
   let url: string
   let size: { w: number; h: number } | null = null
@@ -45,7 +46,7 @@ export async function fileToLogo(file: File, max = 256): Promise<LogoImage> {
     const img = await new Promise<HTMLImageElement>((resolve, reject) => {
       const i = new Image()
       i.onload = () => resolve(i)
-      i.onerror = () => reject(new Error('تعذّر قراءة الصورة'))
+      i.onerror = () => reject(new Error(t('تعذّر قراءة الصورة')))
       i.src = url
     })
     let w = size?.w
@@ -59,7 +60,7 @@ export async function fileToLogo(file: File, max = 256): Promise<LogoImage> {
     canvas.width = w
     canvas.height = h
     const ctx = canvas.getContext('2d', { willReadFrequently: true })
-    if (!ctx) throw new Error('تعذّر معالجة الصورة')
+    if (!ctx) throw new Error(t('تعذّر معالجة الصورة'))
     ctx.drawImage(img, 0, 0, w, h)
     return { dataUrl: canvas.toDataURL('image/png'), bg: detectBackdrop(ctx, w, h) }
   } finally {

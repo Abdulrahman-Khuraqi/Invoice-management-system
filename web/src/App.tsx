@@ -15,6 +15,7 @@ import StoreInfoPage from './pages/settings/StoreInfoPage'
 import StoresSettings from './pages/settings/Stores'
 import { ActivityPage, UsersSettings } from './pages/settings/Users'
 import type { User } from './types'
+import { t } from './lib/i18n'
 
 type Boot = { state: 'loading' } | { state: 'setup' } | { state: 'login' } | { state: 'ready'; user: User } | { state: 'error'; message: string }
 
@@ -55,9 +56,9 @@ export default function App() {
       )}
       {boot.state === 'error' && (
         <div className="flex min-h-dvh flex-col items-center justify-center gap-4 px-6 text-center">
-          <p className="text-[18px] font-semibold">تعذّر الاتصال بالسيرفر</p>
+          <p className="text-[18px] font-semibold">{t('تعذّر الاتصال بالسيرفر')}</p>
           <p className="text-[15px] text-muted">{boot.message}</p>
-          <Button onClick={start}>إعادة المحاولة</Button>
+          <Button onClick={start}>{t('إعادة المحاولة')}</Button>
         </div>
       )}
       {boot.state === 'setup' && <Setup onDone={setUser} />}

@@ -5,6 +5,7 @@ import type { Store, StoreInfo } from '../types'
 import { useFeedback } from './Feedback'
 import { StoreAvatar } from './StoreLogo'
 import { Card, Field, Input, Textarea } from './ui'
+import { t } from '../lib/i18n'
 
 export const EMPTY_INFO: StoreInfo = { website: null, phone: null, whatsapp: null, email: null, address: null, cr_number: null, vat_number: null, notes: null }
 
@@ -33,33 +34,33 @@ export function StoreInfoFields({ value, onChange }: { value: StoreInfo; onChang
   const v = (k: keyof StoreInfo) => value[k] ?? ''
   return (
     <div className="space-y-4">
-      <Field label="الموقع الإلكتروني">
+      <Field label={t('الموقع الإلكتروني')}>
         <Input type="url" dir="ltr" inputMode="url" placeholder="https://example.com" value={v('website')} onChange={set('website')} className="text-start" />
       </Field>
       <div className="grid grid-cols-2 gap-3">
-        <Field label="الجوال / الهاتف">
+        <Field label={t('الجوال / الهاتف')}>
           <Input type="tel" dir="ltr" inputMode="tel" placeholder="05xxxxxxxx" value={v('phone')} onChange={set('phone')} className="text-start" />
         </Field>
-        <Field label="واتساب">
+        <Field label={t('واتساب')}>
           <Input type="tel" dir="ltr" inputMode="tel" placeholder="05xxxxxxxx" value={v('whatsapp')} onChange={set('whatsapp')} className="text-start" />
         </Field>
       </div>
-      <Field label="البريد الإلكتروني">
+      <Field label={t('البريد الإلكتروني')}>
         <Input type="email" dir="ltr" inputMode="email" placeholder="info@example.com" value={v('email')} onChange={set('email')} className="text-start" />
       </Field>
-      <Field label="العنوان">
+      <Field label={t('العنوان')}>
         <Input value={v('address')} onChange={set('address')} />
       </Field>
       <div className="grid grid-cols-2 gap-3">
-        <Field label="السجل التجاري">
+        <Field label={t('السجل التجاري')}>
           <Input dir="ltr" inputMode="numeric" value={v('cr_number')} onChange={set('cr_number')} className="num text-start" />
         </Field>
-        <Field label="الرقم الضريبي">
+        <Field label={t('الرقم الضريبي')}>
           <Input dir="ltr" inputMode="numeric" value={v('vat_number')} onChange={set('vat_number')} className="num text-start" />
         </Field>
       </div>
-      <Field label="ملاحظات">
-        <Textarea value={v('notes')} onChange={set('notes')} placeholder="أي معلومات أخرى مهمة عن المتجر…" />
+      <Field label={t('ملاحظات')}>
+        <Textarea value={v('notes')} onChange={set('notes')} placeholder={t('أي معلومات أخرى مهمة عن المتجر…')} />
       </Field>
     </div>
   )
@@ -83,9 +84,9 @@ function InfoRow({ icon, label, children, copy, href }: { icon: ReactNode; label
       </div>
       {copy && (
         <button
-          aria-label="نسخ"
+          aria-label={t('نسخ')}
           className="shrink-0 p-1.5 text-muted hover:text-fg"
-          onClick={() => navigator.clipboard?.writeText(copy).then(() => toast('تم النسخ'), () => {})}
+          onClick={() => navigator.clipboard?.writeText(copy).then(() => toast(t('تم النسخ')), () => {})}
         >
           <Copy className="size-4" />
         </button>
@@ -103,47 +104,47 @@ export function StoreInfoCard({ store }: { store: Store }) {
         <StoreAvatar name={store.name} color={store.color} src={storeLogoUrl(store)} bg={store.logo_bg} className="size-12" />
         <div className="min-w-0 flex-1">
           <p className="truncate text-[17px] font-bold">{store.name}</p>
-          <p className="text-[13px] text-muted">معلومات المتجر</p>
+          <p className="text-[13px] text-muted">{t('معلومات المتجر')}</p>
         </div>
       </div>
       <div className="divide-y divide-line lg:grid lg:grid-cols-2 lg:gap-x-8 lg:divide-y-0">
         {i.website && (
-          <InfoRow icon={<Globe />} label="الموقع الإلكتروني" href={i.website} copy={i.website}>
+          <InfoRow icon={<Globe />} label={t('الموقع الإلكتروني')} href={i.website} copy={i.website}>
             <span dir="ltr" className="inline-block">{hostOf(i.website)}</span>
           </InfoRow>
         )}
         {i.phone && (
-          <InfoRow icon={<Phone />} label="الجوال / الهاتف" href={telHref(i.phone)} copy={i.phone}>
+          <InfoRow icon={<Phone />} label={t('الجوال / الهاتف')} href={telHref(i.phone)} copy={i.phone}>
             <span className="num">{i.phone}</span>
           </InfoRow>
         )}
         {i.whatsapp && (
-          <InfoRow icon={<MessageCircle />} label="واتساب" href={waHref(i.whatsapp)} copy={i.whatsapp}>
+          <InfoRow icon={<MessageCircle />} label={t('واتساب')} href={waHref(i.whatsapp)} copy={i.whatsapp}>
             <span className="num">{i.whatsapp}</span>
           </InfoRow>
         )}
         {i.email && (
-          <InfoRow icon={<Mail />} label="البريد الإلكتروني" href={`mailto:${i.email}`} copy={i.email}>
+          <InfoRow icon={<Mail />} label={t('البريد الإلكتروني')} href={`mailto:${i.email}`} copy={i.email}>
             <span dir="ltr" className="inline-block">{i.email}</span>
           </InfoRow>
         )}
         {i.address && (
-          <InfoRow icon={<MapPin />} label="العنوان" copy={i.address}>
+          <InfoRow icon={<MapPin />} label={t('العنوان')} copy={i.address}>
             {i.address}
           </InfoRow>
         )}
         {i.cr_number && (
-          <InfoRow icon={<Building2 />} label="السجل التجاري" copy={i.cr_number}>
+          <InfoRow icon={<Building2 />} label={t('السجل التجاري')} copy={i.cr_number}>
             <span className="num">{i.cr_number}</span>
           </InfoRow>
         )}
         {i.vat_number && (
-          <InfoRow icon={<FileText />} label="الرقم الضريبي" copy={i.vat_number}>
+          <InfoRow icon={<FileText />} label={t('الرقم الضريبي')} copy={i.vat_number}>
             <span className="num">{i.vat_number}</span>
           </InfoRow>
         )}
         {i.notes && (
-          <InfoRow icon={<StickyNote />} label="ملاحظات">
+          <InfoRow icon={<StickyNote />} label={t('ملاحظات')}>
             <span className="whitespace-pre-line">{i.notes}</span>
           </InfoRow>
         )}

@@ -8,6 +8,7 @@ import { Sheet } from '../../components/Sheet'
 import { Button, Chip, ColorPicker, EmptyState, Field, Input, Segmented, Select, StoreDot, Switch, Textarea, cx } from '../../components/ui'
 import { KIND_LABELS, money, priceRange } from '../../lib/format'
 import type { CatalogItem, Category, ItemKind } from '../../types'
+import { t } from '../../lib/i18n'
 
 export default function CatalogSettings() {
   const { items, categories, can, currentStore, storeById } = useApp()
@@ -29,18 +30,18 @@ export default function CatalogSettings() {
   const archivedCount = inScope.filter((i) => !i.is_active).length
 
   const groups = useMemo(() => {
-    const t = q.trim().toLowerCase()
+    const needle = q.trim().toLowerCase()
     const shown = inScope.filter(
       (i) =>
         (showArchived || i.is_active) &&
         (kind === 'all' || i.kind === kind) &&
-        (!t || i.name.toLowerCase().includes(t) || (i.category_name ?? '').toLowerCase().includes(t)),
+        (!needle || i.name.toLowerCase().includes(needle) || (i.category_name ?? '').toLowerCase().includes(needle)),
     )
     const out: { key: number; name: string | null; color: string | null; items: CatalogItem[] }[] = categories
       .map((c) => ({ key: c.id, name: c.name, color: c.color, items: shown.filter((i) => i.category_id === c.id) }))
       .filter((g) => g.items.length)
     const rest = shown.filter((i) => !i.category_id || !categories.some((c) => c.id === i.category_id))
-    if (rest.length) out.push({ key: 0, name: out.length ? 'بدون تصنيف' : null, color: null, items: rest })
+    if (rest.length) out.push({ key: 0, name: out.length ? t('بدون تصنيف') : null, color: null, items: rest })
     return out
   }, [inScope, categories, q, kind, showArchived])
   const total = groups.reduce((n, g) => n + g.items.length, 0)
@@ -48,12 +49,13 @@ export default function CatalogSettings() {
   return (
     <>
       <TopBar
-        title="الخدمات والمنتجات"
+        title={t('الخدمات والمنتجات')}
         back
         actions={
           can('editor') && (
             <Button size="sm" icon={<Plus className="size-5" />} onClick={() => setEditItem('new')}>
-              إضافة
+              
+              {t('إضافة')}
             </Button>
           )
         }
@@ -63,12 +65,12 @@ export default function CatalogSettings() {
           <div className="flex items-center gap-2">
             <div className="relative min-w-0 flex-1">
               <Search className="pointer-events-none absolute start-4 top-1/2 size-5 -translate-y-1/2 text-muted" />
-              <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="ابحث بالاسم أو التصنيف…" className="ps-12 lg:h-11" />
+              <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t('ابحث بالاسم أو التصنيف…')} className="ps-12 lg:h-11" />
             </div>
             <button
               onClick={() => setCatsOpen(true)}
-              aria-label="التصنيفات"
-              title="التصنيفات"
+              aria-label={t('التصنيفات')}
+              title={t('التصنيفات')}
               className="flex size-12 shrink-0 items-center justify-center rounded-2xl border border-line bg-surface text-muted transition hover:bg-surface-2 hover:text-fg lg:size-11"
             >
               <Tags className="size-5" />
@@ -82,20 +84,24 @@ export default function CatalogSettings() {
                   <span className="truncate">{store.name}</span>
                 </Chip>
                 <Chip active={!byStore} onClick={() => setScope('all')}>
-                  كل المتاجر
+                  
+                  {t('كل المتاجر')}
                 </Chip>
                 <span className="mx-1 w-px shrink-0 self-stretch bg-line" aria-hidden />
               </>
             )}
             <Chip active={kind === 'service'} onClick={() => setKind(kind === 'service' ? 'all' : 'service')}>
-              خدمات
+              
+              {t('خدمات')}
             </Chip>
             <Chip active={kind === 'product'} onClick={() => setKind(kind === 'product' ? 'all' : 'product')}>
-              منتجات
+              
+              {t('منتجات')}
             </Chip>
             {archivedCount > 0 && (
               <Chip active={showArchived} onClick={() => setShowArchived(!showArchived)}>
-                المؤرشفة <span className="num">{archivedCount}</span>
+                
+                {t('المؤرشفة')} <span className="num">{archivedCount}</span>
               </Chip>
             )}
           </div>
@@ -104,14 +110,15 @@ export default function CatalogSettings() {
         {total === 0 ? (
           <EmptyState
             icon={<Package className="size-8" />}
-            title={q || kind !== 'all' ? 'لا توجد نتائج' : byStore ? 'لا توجد خدمات لهذا المتجر بعد' : 'لا توجد خدمات أو منتجات'}
-            text={q || kind !== 'all' ? 'جرّب تغيير البحث أو الفلتر' : 'أضف ما تبيعه، ثم اربط كل فاتورة بخدمتها أو منتجها'}
+            title={q || kind !== 'all' ? t('لا توجد نتائج') : byStore ? t('لا توجد خدمات لهذا المتجر بعد') : t('لا توجد خدمات أو منتجات')}
+            text={q || kind !== 'all' ? t('جرّب تغيير البحث أو الفلتر') : t('أضف ما تبيعه، ثم اربط كل فاتورة بخدمتها أو منتجها')}
             action={
               <div className="flex flex-wrap justify-center gap-2">
-                {can('editor') && !q && kind === 'all' && <Button onClick={() => setEditItem('new')}>إضافة {byStore ? 'عنصر لهذا المتجر' : 'أول عنصر'}</Button>}
+                {can('editor') && !q && kind === 'all' && <Button onClick={() => setEditItem('new')}>{byStore ? t('إضافة عنصر لهذا المتجر') : t('إضافة أول عنصر')}</Button>}
                 {byStore && (
                   <Button variant="secondary" onClick={() => setScope('all')}>
-                    عرض كل المتاجر
+                    
+                    {t('عرض كل المتاجر')}
                   </Button>
                 )}
               </div>
@@ -142,17 +149,18 @@ export default function CatalogSettings() {
       <Sheet
         open={catsOpen}
         onClose={() => setCatsOpen(false)}
-        title="التصنيفات"
+        title={t('التصنيفات')}
         footer={
           can('editor') && (
             <Button block size="lg" icon={<Plus className="size-5" />} onClick={() => (setCatsOpen(false), setEditCat('new'))}>
-              تصنيف جديد
+              
+              {t('تصنيف جديد')}
             </Button>
           )
         }
       >
-        <p className="mb-3 text-[14px] text-muted">التصنيفات تجمع الخدمات والمنتجات (مثل: باقات، استشارات، ملابس) وتظهر في التقارير.</p>
-        {!categories.length && <p className="py-6 text-center text-[15px] text-muted">لا توجد تصنيفات بعد</p>}
+        <p className="mb-3 text-[14px] text-muted">{t('التصنيفات تجمع الخدمات والمنتجات (مثل: باقات، استشارات، ملابس) وتظهر في التقارير.')}</p>
+        {!categories.length && <p className="py-6 text-center text-[15px] text-muted">{t('لا توجد تصنيفات بعد')}</p>}
         <div className="divide-y divide-line overflow-hidden rounded-2xl border border-line">
           {categories.map((c) => (
             <button
@@ -163,7 +171,7 @@ export default function CatalogSettings() {
               <span className="size-3.5 shrink-0 rounded-full" style={{ background: c.color }} />
               <span className="flex-1 text-[16px] font-medium">{c.name}</span>
               <span className="text-[13px] text-muted">
-                <span className="num">{c.item_count}</span> عنصر
+                {t('{0} عنصر', c.item_count)}
               </span>
             </button>
           ))}
@@ -179,7 +187,7 @@ export default function CatalogSettings() {
 /** One line per item: name (and store when viewing all stores) on the start side, price on the end side. */
 function ItemRow({ item: i, showStore, onClick }: { item: CatalogItem; showStore: boolean; onClick?: () => void }) {
   const price = priceRange(i.price_min, i.price_max) ?? (i.default_price !== null ? money(i.default_price) : null)
-  const sub = [showStore ? i.store_name ?? 'كل المتاجر' : null, !i.is_active ? 'مؤرشف' : null].filter(Boolean).join(' · ')
+  const sub = [showStore ? i.store_name ?? t('كل المتاجر') : null, !i.is_active ? t('مؤرشف') : null].filter(Boolean).join(' · ')
   return (
     <button
       onClick={onClick}
@@ -196,7 +204,7 @@ function ItemRow({ item: i, showStore, onClick }: { item: CatalogItem; showStore
       {price && (
         <span className="shrink-0 whitespace-nowrap text-[15px] font-semibold">
           <span className="num">{price}</span>
-          <span className="ms-1 text-[12px] font-normal text-muted">ر.س</span>
+          <span className="ms-1 text-[12px] font-normal text-muted">{t('ر.س')}</span>
         </span>
       )}
     </button>
@@ -231,7 +239,7 @@ function ItemSheet({ item, defaultStoreId, onClose }: { item: CatalogItem | null
       if (item) await api(`catalog/items/${item.id}`, { method: 'PUT', body })
       else await api('catalog/items', { method: 'POST', body })
       await reloadCatalog()
-      toast('تم الحفظ')
+      toast(t('تم الحفظ'))
       onClose()
     } catch (e) {
       toast(errorMessage(e), 'error')
@@ -244,16 +252,16 @@ function ItemSheet({ item, defaultStoreId, onClose }: { item: CatalogItem | null
     if (!item) return
     const used = item.usage_count > 0
     const ok = await confirm({
-      title: used ? `أرشفة «${item.name}»؟` : `حذف «${item.name}»؟`,
-      text: used ? `مستخدم في ${item.usage_count} فاتورة، لذلك سيُؤرشف بدل الحذف ويبقى ظاهراً في الفواتير القديمة.` : 'سيتم حذفه نهائياً.',
-      confirmLabel: used ? 'أرشفة' : 'حذف',
+      title: used ? t('أرشفة «{0}»؟', item.name) : t('حذف «{0}»؟', item.name),
+      text: used ? t('مستخدم في {0} فاتورة، لذلك سيُؤرشف بدل الحذف ويبقى ظاهراً في الفواتير القديمة.', item.usage_count) : t('سيتم حذفه نهائياً.'),
+      confirmLabel: used ? t('أرشفة') : t('حذف'),
       danger: !used,
     })
     if (!ok) return
     try {
       await api(`catalog/items/${item.id}`, { method: 'DELETE' })
       await reloadCatalog()
-      toast(used ? 'تمت الأرشفة' : 'تم الحذف')
+      toast(used ? t('تمت الأرشفة') : t('تم الحذف'))
       onClose()
     } catch (e) {
       toast(errorMessage(e), 'error')
@@ -264,14 +272,15 @@ function ItemSheet({ item, defaultStoreId, onClose }: { item: CatalogItem | null
     <Sheet
       open
       onClose={onClose}
-      title={item ? 'تعديل' : 'خدمة أو منتج جديد'}
+      title={item ? t('تعديل') : t('خدمة أو منتج جديد')}
       footer={
         <div className="flex gap-3">
           <Button block size="lg" loading={saving} disabled={!f.name.trim()} onClick={save}>
-            حفظ
+            
+            {t('حفظ')}
           </Button>
           {item && (
-            <Button size="lg" variant="danger" onClick={remove} aria-label="حذف">
+            <Button size="lg" variant="danger" onClick={remove} aria-label={t('حذف')}>
               <Trash2 className="size-5" />
             </Button>
           )}
@@ -283,38 +292,38 @@ function ItemSheet({ item, defaultStoreId, onClose }: { item: CatalogItem | null
           value={f.kind}
           onChange={(kind) => setF({ ...f, kind })}
           options={[
-            { value: 'service', label: 'خدمة' },
-            { value: 'product', label: 'منتج' },
+            { value: 'service', label: t('خدمة') },
+            { value: 'product', label: t('منتج') },
           ]}
         />
-        <Field label="الاسم" required hint={item && item.usage_count > 0 ? `مستخدم في ${item.usage_count} فاتورة` : undefined}>
+        <Field label={t('الاسم')} required hint={item && item.usage_count > 0 ? t('مستخدم في {0} فاتورة', item.usage_count) : undefined}>
           <Input autoFocus={!item} value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} />
         </Field>
 
         <div>
-          <Field label="السعر (ر.س)" hint={showRange ? undefined : 'يُملأ تلقائياً عند اختيار هذا العنصر في فاتورة'}>
+          <Field label={t('السعر (ر.س)')} hint={showRange ? undefined : t('يُملأ تلقائياً عند اختيار هذا العنصر في فاتورة')}>
             <Input inputMode="decimal" value={f.default_price} onChange={(e) => setF({ ...f, default_price: e.target.value })} className="num text-end text-[18px] font-semibold" />
           </Field>
           {showRange ? (
             <div className="mt-3 grid grid-cols-2 gap-3">
-              <Field label="من">
+              <Field label={t('من')}>
                 <Input inputMode="decimal" value={f.price_min} onChange={(e) => setF({ ...f, price_min: e.target.value })} className="num text-end" />
               </Field>
-              <Field label="إلى">
+              <Field label={t('إلى')}>
                 <Input inputMode="decimal" value={f.price_max} onChange={(e) => setF({ ...f, price_max: e.target.value })} className="num text-end" />
               </Field>
             </div>
           ) : (
             <button type="button" onClick={() => setShowRange(true)} className="mt-1 flex h-10 items-center gap-1 text-[14px] font-semibold text-primary">
-              <Plus className="size-4" /> نطاق سعر (من – إلى)
+              <Plus className="size-4" />  {t('نطاق سعر (من – إلى)')}
             </button>
           )}
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="التصنيف">
+          <Field label={t('التصنيف')}>
             <Select value={f.category_id} onChange={(e) => setF({ ...f, category_id: e.target.value })}>
-              <option value="">بدون تصنيف</option>
+              <option value="">{t('بدون تصنيف')}</option>
               {categories.map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.name}
@@ -322,9 +331,9 @@ function ItemSheet({ item, defaultStoreId, onClose }: { item: CatalogItem | null
               ))}
             </Select>
           </Field>
-          <Field label="المتجر">
+          <Field label={t('المتجر')}>
             <Select value={f.store_id} onChange={(e) => setF({ ...f, store_id: e.target.value })}>
-              {!restricted && <option value="">كل المتاجر</option>}
+              {!restricted && <option value="">{t('كل المتاجر')}</option>}
               {activeStores.map((s) => (
                 <option key={s.id} value={s.id}>
                   {s.name}
@@ -336,17 +345,18 @@ function ItemSheet({ item, defaultStoreId, onClose }: { item: CatalogItem | null
 
         <button type="button" onClick={() => setMore((m) => !m)} className="flex h-10 items-center gap-1 text-[15px] font-semibold text-primary">
           <ChevronDown className={cx('size-5 transition', more && 'rotate-180')} />
-          تفاصيل إضافية
+          
+          {t('تفاصيل إضافية')}
         </button>
         {more && (
           <div className="space-y-4">
-            <Field label="الوصف">
+            <Field label={t('الوصف')}>
               <Textarea value={f.description} onChange={(e) => setF({ ...f, description: e.target.value })} />
             </Field>
-            <Field label="الرمز (SKU)">
+            <Field label={t('الرمز (SKU)')}>
               <Input value={f.sku} onChange={(e) => setF({ ...f, sku: e.target.value })} className="num" />
             </Field>
-            {item && <Switch checked={f.is_active} onChange={(is_active) => setF({ ...f, is_active })} label="نشط (يظهر عند اختيار الخدمة/المنتج)" />}
+            {item && <Switch checked={f.is_active} onChange={(is_active) => setF({ ...f, is_active })} label={t('نشط (يظهر عند اختيار الخدمة/المنتج)')} />}
           </div>
         )}
       </div>
@@ -366,7 +376,7 @@ function CategorySheet({ category, onClose }: { category: Category | null; onClo
       if (category) await api(`catalog/categories/${category.id}`, { method: 'PUT', body: { name, color } })
       else await api('catalog/categories', { method: 'POST', body: { name, color } })
       await reloadCatalog()
-      toast('تم الحفظ')
+      toast(t('تم الحفظ'))
       onClose()
     } catch (e) {
       toast(errorMessage(e), 'error')
@@ -377,9 +387,9 @@ function CategorySheet({ category, onClose }: { category: Category | null; onClo
   const remove = async () => {
     if (!category) return
     const ok = await confirm({
-      title: `حذف تصنيف «${category.name}»؟`,
-      text: category.item_count ? `${category.item_count} عنصر سيصبح بدون تصنيف (لن يُحذف).` : undefined,
-      confirmLabel: 'حذف',
+      title: t('حذف تصنيف «{0}»؟', category.name),
+      text: category.item_count ? t('{0} عنصر سيصبح بدون تصنيف (لن يُحذف).', category.item_count) : undefined,
+      confirmLabel: t('حذف'),
       danger: true,
     })
     if (!ok) return
@@ -395,14 +405,15 @@ function CategorySheet({ category, onClose }: { category: Category | null; onClo
     <Sheet
       open
       onClose={onClose}
-      title={category ? 'تعديل التصنيف' : 'تصنيف جديد'}
+      title={category ? t('تعديل التصنيف') : t('تصنيف جديد')}
       footer={
         <div className="flex gap-3">
           <Button block size="lg" loading={saving} disabled={!name.trim()} onClick={save}>
-            حفظ
+            
+            {t('حفظ')}
           </Button>
           {category && can('admin') && (
-            <Button size="lg" variant="danger" onClick={remove} aria-label="حذف">
+            <Button size="lg" variant="danger" onClick={remove} aria-label={t('حذف')}>
               <Trash2 className="size-5" />
             </Button>
           )}
@@ -410,10 +421,10 @@ function CategorySheet({ category, onClose }: { category: Category | null; onClo
       }
     >
       <div className="space-y-4">
-        <Field label="الاسم" required>
+        <Field label={t('الاسم')} required>
           <Input autoFocus value={name} onChange={(e) => setName(e.target.value)} />
         </Field>
-        <Field label="اللون">
+        <Field label={t('اللون')}>
           <ColorPicker value={color} onChange={setColor} />
         </Field>
       </div>

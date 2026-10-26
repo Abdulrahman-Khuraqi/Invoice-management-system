@@ -99,6 +99,13 @@ body {
     cursor: pointer;
   }
 
+  /* English (left-to-right): the arrow moves to the right side. */
+  [dir='ltr'] select {
+    background-position: right 14px center;
+    padding-left: 16px !important;
+    padding-right: 44px !important;
+  }
+
   /* 16px inputs stop iOS from zooming on focus. */
   input, select, textarea {
     font-size: 16px;

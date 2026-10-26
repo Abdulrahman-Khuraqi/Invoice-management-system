@@ -3,6 +3,7 @@ import { FileText } from 'lucide-react'
 import { api, errorMessage } from '../api'
 import { Button, Field, Input } from '../components/ui'
 import type { User } from '../types'
+import { t } from '../lib/i18n'
 
 function AuthShell({ title, subtitle, children }: { title: string; subtitle: string; children: ReactNode }) {
   return (
@@ -15,13 +16,14 @@ function AuthShell({ title, subtitle, children }: { title: string; subtitle: str
           <span className="flex size-11 items-center justify-center rounded-xl bg-white/15">
             <FileText className="size-6" />
           </span>
-          إدارة الفواتير
+          
+          {t('إدارة الفواتير')}
         </span>
         <div className="relative max-w-md">
-          <h2 className="text-[34px] font-bold leading-snug">كل فواتير متاجرك في مكان واحد</h2>
-          <p className="mt-4 text-[17px] leading-relaxed opacity-85">استورد ملفات Excel من بوابة الدفع، صنّف المبيعات، وتابع التقارير لكل متجر بسهولة.</p>
+          <h2 className="text-[34px] font-bold leading-snug">{t('كل فواتير متاجرك في مكان واحد')}</h2>
+          <p className="mt-4 text-[17px] leading-relaxed opacity-85">{t('استورد ملفات Excel من بوابة الدفع، صنّف المبيعات، وتابع التقارير لكل متجر بسهولة.')}</p>
         </div>
-        <span className="relative text-[14px] opacity-70">الإصدار 1.0</span>
+        <span className="relative text-[14px] opacity-70">{t('الإصدار 1.0')}</span>
       </div>
       <div className="flex flex-col items-center justify-center px-5 py-10">
       <div className="w-full max-w-sm">
@@ -58,17 +60,18 @@ export function Login({ onLogin }: { onLogin: (u: User) => void }) {
     }
   }
   return (
-    <AuthShell title="إدارة الفواتير" subtitle="سجّل الدخول للمتابعة">
+    <AuthShell title={t('إدارة الفواتير')} subtitle={t('سجّل الدخول للمتابعة')}>
       <form onSubmit={submit} className="space-y-4">
-        <Field label="اسم المستخدم">
+        <Field label={t('اسم المستخدم')}>
           <Input value={username} onChange={(e) => setUsername(e.target.value)} autoComplete="username" autoCapitalize="none" autoCorrect="off" dir="ltr" required />
         </Field>
-        <Field label="كلمة المرور">
+        <Field label={t('كلمة المرور')}>
           <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" dir="ltr" required />
         </Field>
         {error && <p className="rounded-2xl bg-danger-soft px-4 py-3 text-[15px] text-danger">{error}</p>}
         <Button type="submit" size="lg" block loading={loading}>
-          دخول
+          
+          {t('دخول')}
         </Button>
       </form>
     </AuthShell>
@@ -82,7 +85,7 @@ export function Setup({ onDone }: { onDone: (u: User) => void }) {
   const [loading, setLoading] = useState(false)
   const submit = async (e: FormEvent) => {
     e.preventDefault()
-    if (f.password !== f.confirm) return setError('كلمتا المرور غير متطابقتين')
+    if (f.password !== f.confirm) return setError(t('كلمتا المرور غير متطابقتين'))
     setLoading(true)
     setError('')
     try {
@@ -95,23 +98,24 @@ export function Setup({ onDone }: { onDone: (u: User) => void }) {
     }
   }
   return (
-    <AuthShell title="مرحباً بك 👋" subtitle="أنشئ حساب المدير لبدء استخدام النظام">
+    <AuthShell title={t('مرحباً بك 👋')} subtitle={t('أنشئ حساب المدير لبدء استخدام النظام')}>
       <form onSubmit={submit} className="space-y-4">
-        <Field label="اسمك">
+        <Field label={t('اسمك')}>
           <Input value={f.display_name} onChange={(e) => setF({ ...f, display_name: e.target.value })} required />
         </Field>
-        <Field label="اسم المستخدم" hint="أحرف إنجليزية أو أرقام، 3 على الأقل">
+        <Field label={t('اسم المستخدم')} hint={t('أحرف إنجليزية أو أرقام، 3 على الأقل')}>
           <Input value={f.username} onChange={(e) => setF({ ...f, username: e.target.value })} autoCapitalize="none" autoCorrect="off" dir="ltr" required />
         </Field>
-        <Field label="كلمة المرور" hint="8 أحرف على الأقل">
+        <Field label={t('كلمة المرور')} hint={t('8 أحرف على الأقل')}>
           <Input type="password" value={f.password} onChange={(e) => setF({ ...f, password: e.target.value })} autoComplete="new-password" dir="ltr" required minLength={8} />
         </Field>
-        <Field label="تأكيد كلمة المرور">
+        <Field label={t('تأكيد كلمة المرور')}>
           <Input type="password" value={f.confirm} onChange={(e) => setF({ ...f, confirm: e.target.value })} autoComplete="new-password" dir="ltr" required />
         </Field>
         {error && <p className="rounded-2xl bg-danger-soft px-4 py-3 text-[15px] text-danger">{error}</p>}
         <Button type="submit" size="lg" block loading={loading}>
-          إنشاء الحساب
+          
+          {t('إنشاء الحساب')}
         </Button>
       </form>
     </AuthShell>
