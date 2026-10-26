@@ -329,7 +329,7 @@ export default function Invoices() {
               }}
               className="flex h-14 w-full items-center gap-3 rounded-2xl px-4 text-[17px] font-medium hover:bg-surface-2"
             >
-              <StoreDot color={s.color} className="size-3.5" /> {s.name}
+              <StoreDot color={s.color} className="size-3.5" storeId={s.id} /> {s.name}
             </button>
           ))}
         </div>

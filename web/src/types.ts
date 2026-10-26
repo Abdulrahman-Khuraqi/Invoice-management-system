@@ -23,6 +23,8 @@ export interface Store {
   is_active: boolean
   sort: number
   invoice_count: number
+  /** Version stamp of the uploaded logo (used in its URL); null = no logo. */
+  logo_v: number | null
   terminals: Terminal[]
 }
 

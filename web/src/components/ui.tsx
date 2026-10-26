@@ -1,5 +1,6 @@
 import { forwardRef, type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes, type TextareaHTMLAttributes } from 'react'
 import { Check, Loader2 } from 'lucide-react'
+import { useStoreLogo } from '../context'
 import { PALETTE, money } from '../lib/format'
 
 const cx = (...c: (string | false | null | undefined)[]) => c.filter(Boolean).join(' ')
@@ -148,7 +149,10 @@ export function Badge({ children, color, tone = 'neutral', className }: { childr
   )
 }
 
-export function StoreDot({ color, className }: { color: string; className?: string }) {
+/** Store color dot — or the store's logo when `storeId` is given and it has one. */
+export function StoreDot({ color, className, storeId }: { color: string; className?: string; storeId?: number | null }) {
+  const logo = useStoreLogo(storeId)
+  if (logo) return <img src={logo} alt="" className="inline-block size-5 shrink-0 rounded-full bg-white object-contain ring-1 ring-line" />
   return <span className={cx('inline-block size-2.5 shrink-0 rounded-full', className)} style={{ background: color }} />
 }
 

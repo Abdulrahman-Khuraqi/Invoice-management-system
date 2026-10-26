@@ -48,4 +48,7 @@ export async function api<T = unknown>(
   return data as T
 }
 
+/** Same-origin URL of a store's logo (cookie-authenticated); `v` busts the cache when the logo changes. */
+export const storeLogoUrl = (s: { id: number; logo_v: number | null }) => (s.logo_v ? `api/index.php?r=stores/${s.id}/logo&v=${s.logo_v}` : null)
+
 export const errorMessage = (e: unknown) => (e instanceof Error ? e.message : 'حدث خطأ')

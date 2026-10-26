@@ -177,7 +177,7 @@ function StoreSwitcher() {
         onClick={() => setOpen(true)}
         className="flex h-11 max-w-[50%] items-center gap-2 rounded-full border border-line bg-surface px-3.5 text-[15px] font-semibold shadow-card hover:bg-surface-2 active:scale-95 lg:max-w-xs"
       >
-        {current ? <StoreDot color={current.color} /> : <StoreIcon className="size-4 text-muted" />}
+        {current ? <StoreDot color={current.color} storeId={current.id} /> : <StoreIcon className="size-4 text-muted" />}
         <span className="truncate">{current?.name ?? 'كل المتاجر'}</span>
         <ChevronDown className="size-4 shrink-0 text-muted" />
       </button>
@@ -195,7 +195,7 @@ function StoreSwitcher() {
                 currentStore === s.id ? 'bg-primary-soft text-primary' : 'hover:bg-surface-2',
               )}
             >
-              {s.color ? <StoreDot color={s.color} className="size-3.5" /> : <StoreIcon className="size-5 text-muted" />}
+              {s.color ? <StoreDot color={s.color} className="size-3.5" storeId={s.id} /> : <StoreIcon className="size-5 text-muted" />}
               <span className="flex-1 text-start">{s.name}</span>
               {currentStore === s.id && <Check className="size-5" />}
             </button>

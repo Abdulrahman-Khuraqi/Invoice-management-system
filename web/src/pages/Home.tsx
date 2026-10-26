@@ -113,7 +113,7 @@ export default function Home() {
                   {stats.by_store.map((s) => (
                     <Card key={s.id} className="p-4" onClick={() => (setCurrentStore(s.id!), navigate(`/invoices?${rangeQuery().slice(1)}`))}>
                       <span className="flex items-center gap-2 text-[15px] font-semibold">
-                        <StoreDot color={s.color!} className="size-3" />
+                        <StoreDot color={s.color!} className="size-3" storeId={s.id} />
                         <span className="truncate">{s.name}</span>
                       </span>
                       <Money value={s.total} className="mt-2 block text-[19px] font-bold" />

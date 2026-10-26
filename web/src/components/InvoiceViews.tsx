@@ -90,7 +90,7 @@ export function InvoiceCard({
         <span className="mt-1 flex items-center gap-2 text-[14px] text-muted">
           {showStore && (
             <span className="flex min-w-0 items-center gap-1.5">
-              <StoreDot color={invoice.store_color} />
+              <StoreDot color={invoice.store_color} storeId={invoice.store_id} />
               <span className="truncate">{invoice.store_name}</span>
             </span>
           )}
@@ -177,7 +177,7 @@ export function InvoiceTable({
                 {showStore && (
                   <td className="px-4 py-3">
                     <span className="flex items-center gap-2">
-                      <StoreDot color={inv.store_color} />
+                      <StoreDot color={inv.store_color} storeId={inv.store_id} />
                       <span className="truncate">{inv.store_name}</span>
                     </span>
                   </td>
@@ -323,7 +323,7 @@ export function InvoiceSheet({
             <Money value={invoice.amount} className="text-[32px] font-bold" />
             <p className="mt-1 text-[16px] font-semibold">{invoice.customer_name || 'بدون اسم'}</p>
             <p className="mt-1 flex items-center justify-center gap-1.5 text-[14px] text-muted">
-              <StoreDot color={invoice.store_color} /> {invoice.store_name} · {fmtDateTime(invoice.paid_at)}
+              <StoreDot color={invoice.store_color} storeId={invoice.store_id} /> {invoice.store_name} · {fmtDateTime(invoice.paid_at)}
             </p>
           </div>
 

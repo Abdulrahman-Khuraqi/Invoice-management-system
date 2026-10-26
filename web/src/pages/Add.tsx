@@ -7,6 +7,7 @@ import { useFeedback } from '../components/Feedback'
 import { InvoiceForm } from '../components/InvoiceForm'
 import { Page, TopBar } from '../components/Layout'
 import { Sheet } from '../components/Sheet'
+import { LogoPicker } from '../components/StoreLogo'
 import { Badge, Button, Card, ColorPicker, Field, Input, Money, Segmented, Select, StoreDot, cx } from '../components/ui'
 import type { ParsedFile, ParsedRow } from '../lib/excel'
 import { PALETTE } from '../lib/format'
@@ -393,7 +394,7 @@ function ImportPanel() {
                 const s = stores.find((x) => x.id === sid)
                 return (
                   <div key={sid} className="flex items-center gap-2 rounded-2xl bg-surface-2 px-3 py-2.5 text-[15px]">
-                    <StoreDot color={s?.color ?? '#999'} />
+                    <StoreDot color={s?.color ?? '#999'} storeId={s?.id} />
                     <span className="flex-1 font-medium">{s?.name}</span>
                     <span className="num text-muted">{e.n}</span>
                     <Money value={e.sum} className="font-semibold" />
@@ -456,6 +457,7 @@ export function NewStoreSheet({ open, onClose, onCreated, defaultName = '' }: { 
   const { toast } = useFeedback()
   const [name, setName] = useState(defaultName)
   const [color, setColor] = useState(PALETTE[Math.floor(Math.random() * PALETTE.length)])
+  const [logo, setLogo] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [lastDefault, setLastDefault] = useState(defaultName)
   if (defaultName !== lastDefault) {
@@ -467,7 +469,15 @@ export function NewStoreSheet({ open, onClose, onCreated, defaultName = '' }: { 
     try {
       const r = await api<{ id: number }>('stores', { method: 'POST', body: { name, color } })
       toast(`تمت إضافة متجر ${name}`)
+      if (logo) {
+        try {
+          await api(`stores/${r.id}/logo`, { method: 'POST', body: { data: logo } })
+        } catch (e) {
+          toast(`تمت إضافة المتجر لكن تعذّر رفع الشعار: ${errorMessage(e)}`, 'error')
+        }
+      }
       setName('')
+      setLogo(null)
       onCreated(r.id)
     } catch (e) {
       toast(errorMessage(e), 'error')
@@ -489,6 +499,9 @@ export function NewStoreSheet({ open, onClose, onCreated, defaultName = '' }: { 
       <div className="space-y-4">
         <Field label="اسم المتجر" required>
           <Input autoFocus value={name} onChange={(e) => setName(e.target.value)} />
+        </Field>
+        <Field label="الشعار (اختياري)">
+          <LogoPicker name={name} color={color} src={logo} onPick={setLogo} onRemove={() => setLogo(null)} />
         </Field>
         <Field label="اللون">
           <ColorPicker value={color} onChange={setColor} />

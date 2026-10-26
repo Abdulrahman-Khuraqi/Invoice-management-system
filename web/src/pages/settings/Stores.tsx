@@ -1,10 +1,11 @@
 import { useState } from 'react'
 import { Archive, ArchiveRestore, Cpu, Plus, Trash2 } from 'lucide-react'
-import { api, errorMessage } from '../../api'
+import { api, errorMessage, storeLogoUrl } from '../../api'
 import { useApp } from '../../context'
 import { useFeedback } from '../../components/Feedback'
 import { Page, TopBar } from '../../components/Layout'
 import { Sheet } from '../../components/Sheet'
+import { LogoPicker, StoreAvatar } from '../../components/StoreLogo'
 import { Badge, Button, Card, ColorPicker, Field, IconButton, Input, SectionTitle, Select, StoreDot } from '../../components/ui'
 import type { Store } from '../../types'
 import { NewStoreSheet } from '../Add'
@@ -18,9 +19,7 @@ export default function StoresSettings() {
 
   const row = (s: Store) => (
     <Card key={s.id} onClick={() => setEditing(s)} className="flex items-center gap-3">
-      <span className="flex size-12 shrink-0 items-center justify-center rounded-2xl text-[20px] font-bold text-white" style={{ background: s.color }}>
-        {s.name.slice(0, 1).toUpperCase()}
-      </span>
+      <StoreAvatar name={s.name} color={s.color} src={storeLogoUrl(s)} />
       <span className="min-w-0 flex-1">
         <span className="block truncate text-[17px] font-semibold">{s.name}</span>
         <span className="text-[14px] text-muted">
@@ -136,6 +135,19 @@ function EditStoreSheet({ store, onClose }: { store: Store; onClose: () => void 
       <div className="space-y-5">
         <Field label="اسم المتجر" required>
           <Input value={name} onChange={(e) => setName(e.target.value)} />
+        </Field>
+        <Field label="الشعار">
+          <LogoPicker
+            name={name}
+            color={color}
+            src={storeLogoUrl(store)}
+            onPick={async (data) => {
+              await api(`stores/${store.id}/logo`, { method: 'POST', body: { data } })
+              await reloadStores()
+              toast('تم تحديث الشعار')
+            }}
+            onRemove={() => call(() => api(`stores/${store.id}/logo`, { method: 'DELETE' }), 'تم حذف الشعار')}
+          />
         </Field>
         <Field label="اللون">
           <ColorPicker value={color} onChange={setColor} />

@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
-import { api } from './api'
+import { api, storeLogoUrl } from './api'
 import { load, save } from './lib/storage'
 import type { CatalogItem, Category, Role, Store, User } from './types'
 
@@ -76,6 +76,13 @@ export function AppProvider({ user, setUser, children }: { user: User; setUser: 
     [user, setUser, stores, categories, items, currentStore, reloadStores, reloadCatalog],
   )
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>
+}
+
+/** Logo URL for a store, or null. Safe to call outside the provider. */
+export function useStoreLogo(id: number | null | undefined): string | null {
+  const v = useContext(Ctx)
+  const s = id ? v?.stores.find((x) => x.id === id) : undefined
+  return s ? storeLogoUrl(s) : null
 }
 
 export function useApp() {
