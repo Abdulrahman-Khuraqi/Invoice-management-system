@@ -4,6 +4,7 @@ import { ALL_EXPORT_KEYS, EXPORT_COLUMNS } from '../lib/excel'
 import { load, save } from '../lib/storage'
 import { Sheet } from './Sheet'
 import { Button, Switch, cx } from './ui'
+import { t } from '../lib/i18n'
 
 interface Preset {
   id: string
@@ -14,10 +15,10 @@ interface Preset {
 }
 
 const PRESETS: Preset[] = [
-  { id: 'all', title: 'كل المعلومات', hint: 'كل الأعمدة. يمكنك تعديل الملف ثم رفعه لتحديث الفواتير', keys: ALL_EXPORT_KEYS, totalRow: false },
-  { id: 'customer', title: 'العميل والمبلغ', hint: 'اسم العميل مع مبلغ فاتورته', keys: ['customer', 'amount'], totalRow: true },
-  { id: 'invoice', title: 'رقم الفاتورة والمبلغ', hint: 'رقم كل فاتورة مع مبلغها', keys: ['invoiceNo', 'amount'], totalRow: true },
-  { id: 'sales', title: 'سجل المبيعات', hint: 'التاريخ والعميل والخدمة والمبلغ', keys: ['date', 'customer', 'item', 'amount'], totalRow: true },
+  { id: 'all', title: t('كل المعلومات'), hint: t('كل الأعمدة. يمكنك تعديل الملف ثم رفعه لتحديث الفواتير'), keys: ALL_EXPORT_KEYS, totalRow: false },
+  { id: 'customer', title: t('العميل والمبلغ'), hint: t('اسم العميل مع مبلغ فاتورته'), keys: ['customer', 'amount'], totalRow: true },
+  { id: 'invoice', title: t('رقم الفاتورة والمبلغ'), hint: t('رقم كل فاتورة مع مبلغها'), keys: ['invoiceNo', 'amount'], totalRow: true },
+  { id: 'sales', title: t('سجل المبيعات'), hint: t('التاريخ والعميل والخدمة والمبلغ'), keys: ['date', 'customer', 'item', 'amount'], totalRow: true },
 ]
 
 const sameKeys = (a: string[], b: string[]) => a.length === b.length && a.every((k) => b.includes(k))
@@ -56,16 +57,17 @@ export function ExportSheet({
     <Sheet
       open={open}
       onClose={onClose}
-      title="تصدير إلى Excel"
+      title={t('تصدير إلى Excel')}
       footer={
         <Button block size="lg" loading={busy} disabled={!keys.length || !count} icon={<Download className="size-5" />} onClick={go}>
-          تصدير <span className="num">{count}</span> فاتورة
+          
+          {t('تصدير {0} فاتورة', count)}
         </Button>
       }
     >
       <div className="space-y-5">
         <div>
-          <p className="mb-2 text-[15px] font-semibold">ماذا تريد أن تصدّر؟</p>
+          <p className="mb-2 text-[15px] font-semibold">{t('ماذا تريد أن تصدّر؟')}</p>
           <div className="space-y-2">
             {PRESETS.map((p) => (
               <button
@@ -94,7 +96,8 @@ export function ExportSheet({
 
         <div>
           <p className="mb-2 text-[15px] font-semibold">
-            الأعمدة {!active && <span className="text-[13px] font-normal text-primary">· مخصّص</span>}
+            
+            {t('الأعمدة')} {!active && <span className="text-[13px] font-normal text-primary">{t('· مخصّص')}</span>}
           </p>
           <div className="flex flex-wrap gap-2">
             {EXPORT_COLUMNS.map((c) => {
@@ -117,7 +120,7 @@ export function ExportSheet({
           </div>
         </div>
 
-        {hasAmount && !sameKeys(keys, ALL_EXPORT_KEYS) && <Switch checked={totalRow} onChange={setTotalRow} label="إضافة صف المجموع في النهاية" />}
+        {hasAmount && !sameKeys(keys, ALL_EXPORT_KEYS) && <Switch checked={totalRow} onChange={setTotalRow} label={t('إضافة صف المجموع في النهاية')} />}
       </div>
     </Sheet>
   )

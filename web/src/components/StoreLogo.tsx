@@ -3,6 +3,7 @@ import { ImagePlus, Trash2 } from 'lucide-react'
 import { fileToLogo, type LogoImage } from '../lib/image'
 import { useFeedback } from './Feedback'
 import { Button, cx } from './ui'
+import { t } from '../lib/i18n'
 
 /** Square store badge: the logo if there is one, otherwise the colored initial. */
 export function StoreAvatar({ name, color, src, bg, className }: { name: string; color: string; src?: string | null; bg?: 'light' | 'dark' | null; className?: string }) {
@@ -43,7 +44,7 @@ export function LogoPicker({
     try {
       await onPick(await fileToLogo(file))
     } catch (e) {
-      toast(e instanceof Error ? e.message : 'تعذّر رفع الشعار', 'error')
+      toast(e instanceof Error ? e.message : t('تعذّر رفع الشعار'), 'error')
     } finally {
       setReading(false)
       if (input.current) input.current.value = ''
@@ -56,14 +57,15 @@ export function LogoPicker({
       <div className="flex min-w-0 flex-1 flex-col items-start gap-2">
         <input ref={input} type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml,.svg" className="hidden" onChange={(e) => choose(e.target.files?.[0])} />
         <Button size="sm" variant="soft" loading={reading || busy} icon={<ImagePlus className="size-4" />} onClick={() => input.current?.click()}>
-          {src ? 'تغيير الشعار' : 'رفع شعار'}
+          {src ? t('تغيير الشعار') : t('رفع شعار')}
         </Button>
         {src && (
           <Button size="sm" variant="ghost" disabled={reading || busy} className="text-danger" icon={<Trash2 className="size-4" />} onClick={() => onRemove()}>
-            حذف الشعار
+            
+            {t('حذف الشعار')}
           </Button>
         )}
-        {!src && <p className="text-[13px] text-muted">PNG أو JPG أو WebP أو SVG — يُصغَّر تلقائياً</p>}
+        {!src && <p className="text-[13px] text-muted">{t('PNG أو JPG أو WebP أو SVG — يُصغَّر تلقائياً')}</p>}
       </div>
     </div>
   )

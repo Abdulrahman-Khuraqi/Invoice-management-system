@@ -2,6 +2,7 @@ import { forwardRef, type ButtonHTMLAttributes, type InputHTMLAttributes, type R
 import { Check, Loader2 } from 'lucide-react'
 import { useStoreLogo } from '../context'
 import { PALETTE, money } from '../lib/format'
+import { t } from '../lib/i18n'
 
 const cx = (...c: (string | false | null | undefined)[]) => c.filter(Boolean).join(' ')
 export { cx }
@@ -242,7 +243,7 @@ export function Money({ value, className }: { value: number; className?: string 
   return (
     <span className={cx('whitespace-nowrap', className)}>
       <span className="num">{money(value)}</span>
-      <span className="ms-1 text-[0.8em] font-normal text-muted">ر.س</span>
+      <span className="ms-1 text-[0.8em] font-normal text-muted">{t('ر.س')}</span>
     </span>
   )
 }

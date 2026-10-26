@@ -15,8 +15,13 @@
     <link rel="icon" href="./icons/icon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png" />
     <script>
-      // Apply the saved theme before first paint to avoid a flash.
+      // Apply the saved language (direction) and theme before first paint to avoid a flash.
       (function () {
+        var en = false;
+        try { en = localStorage.getItem('lang') === 'en'; } catch (e) {}
+        document.documentElement.lang = en ? 'en' : 'ar';
+        document.documentElement.dir = en ? 'ltr' : 'rtl';
+        if (en) document.title = 'Invoice Manager';
         var t = 'system';
         try { t = localStorage.getItem('theme') || 'system'; } catch (e) {}
         var dark = t === 'dark' || (t === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);

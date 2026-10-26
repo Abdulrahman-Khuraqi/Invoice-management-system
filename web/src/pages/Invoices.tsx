@@ -12,6 +12,7 @@ import { Sheet } from '../components/Sheet'
 import { Button, Chip, EmptyState, Field, IconButton, Input, Money, PageLoader, Segmented, Select, StoreDot, cx } from '../components/ui'
 import { PAY_METHODS, RANGE_LABELS, rangeDates, ymd, type RangeKey } from '../lib/format'
 import type { Invoice, InvoiceList } from '../types'
+import { ARROW, t } from '../lib/i18n'
 
 const PER_PAGE = 30
 const FILTER_KEYS = ['unclassified', 'item', 'kind', 'category', 'range', 'from', 'to', 'pay_method', 'source', 'min', 'max', 'sort'] as const
@@ -139,8 +140,8 @@ export default function Invoices() {
   }
 
   const bulkDelete = async () => {
-    const ok = await confirm({ title: `حذف ${selected.size} فاتورة؟`, text: 'لا يمكن التراجع عن الحذف.', confirmLabel: 'حذف', danger: true })
-    if (ok) bulk({ action: 'delete' }, 'تم الحذف')
+    const ok = await confirm({ title: t('حذف {0} فاتورة؟', selected.size), text: t('لا يمكن التراجع عن الحذف.'), confirmLabel: t('حذف'), danger: true })
+    if (ok) bulk({ action: 'delete' }, t('تم الحذف'))
   }
 
   const doExport = async (keys: string[], totalRow: boolean) => {
@@ -155,7 +156,7 @@ export default function Invoices() {
       }
       const storeName = storeById(currentStore)?.name
       const { exportInvoices } = await import('../lib/excel')
-      exportInvoices(all, `فواتير${storeName ? '-' + storeName : ''}-${ymd(new Date())}.xlsx`, { keys, totalRow })
+      exportInvoices(all, t('فواتير{0}-{1}.xlsx', storeName ? '-' + storeName : '', ymd(new Date())), { keys, totalRow })
       setExportOpen(false)
     } catch (e) {
       toast(errorMessage(e), 'error')
@@ -166,7 +167,7 @@ export default function Invoices() {
 
   const itemFilter = items.find((i) => String(i.id) === params.get('item'))
   const extraFilters = ['kind', 'category', 'pay_method', 'source', 'min', 'max', 'sort'].filter((k) => params.get(k)).length
-  const rangeLabel = range ? RANGE_LABELS[range] : params.get('from') || params.get('to') ? `${params.get('from') ?? '…'} ← ${params.get('to') ?? '…'}` : 'الفترة'
+  const rangeLabel = range ? RANGE_LABELS[range] : params.get('from') || params.get('to') ? `${params.get('from') ?? '…'} ${ARROW} ${params.get('to') ?? '…'}` : t('الفترة')
   const anyFilter = FILTER_KEYS.some((k) => params.get(k)) || !!debouncedQ
   const selectedInvoices = data?.invoices.filter((i) => selected.has(i.id)) ?? []
   const commonStore = selectedInvoices.length && selectedInvoices.every((i) => i.store_id === selectedInvoices[0].store_id) ? selectedInvoices[0].store_id : null
@@ -174,10 +175,10 @@ export default function Invoices() {
   return (
     <>
       <TopBar
-        title="الفواتير"
+        title={t('الفواتير')}
         switcher
         actions={
-          <IconButton label="تصدير Excel" onClick={() => setExportOpen(true)} disabled={!data?.total}>
+          <IconButton label={t('تصدير Excel')} onClick={() => setExportOpen(true)} disabled={!data?.total}>
             <Download className="size-6" />
           </IconButton>
         }
@@ -190,33 +191,34 @@ export default function Invoices() {
               type="search"
               value={q}
               onChange={(e) => setQ(e.target.value)}
-              placeholder="ابحث بالاسم، الجوال، رقم الفاتورة، الخدمة…"
+              placeholder={t('ابحث بالاسم، الجوال، رقم الفاتورة، الخدمة…')}
               className="ps-12 pe-11 lg:h-11"
               enterKeyHint="search"
             />
             {q && (
-              <button aria-label="مسح البحث" onClick={() => setQ('')} className="absolute end-2 top-1/2 flex size-9 -translate-y-1/2 items-center justify-center rounded-full text-muted">
+              <button aria-label={t('مسح البحث')} onClick={() => setQ('')} className="absolute end-2 top-1/2 flex size-9 -translate-y-1/2 items-center justify-center rounded-full text-muted">
                 <X className="size-5" />
               </button>
             )}
           </div>
           <div className="no-scrollbar -mx-4 mt-2.5 flex gap-2 overflow-x-auto px-4 pb-1 lg:m-0 lg:flex-wrap lg:overflow-visible lg:p-0">
             <Chip active={params.get('unclassified') === '1'} onClick={() => setParam({ unclassified: params.get('unclassified') === '1' ? null : '1' })}>
-              غير مصنّفة
+              
+              {t('غير مصنّفة')}
             </Chip>
             <Chip active={!!range || !!params.get('from') || !!params.get('to')} onClick={() => setSheet('range')}>
               <CalendarDays className="size-4" /> {rangeLabel}
             </Chip>
             <Chip active={!!itemFilter} onClick={() => (itemFilter ? setParam({ item: null }) : setSheet('item'))}>
-              <Tag className="size-4" /> {itemFilter ? itemFilter.name : 'الخدمة/المنتج'}
+              <Tag className="size-4" /> {itemFilter ? itemFilter.name : t('الخدمة/المنتج')}
               {itemFilter && <X className="size-4" />}
             </Chip>
             <Chip active={extraFilters > 0} onClick={() => setSheet('filters')}>
-              <SlidersHorizontal className="size-4" /> فلاتر{extraFilters ? ` (${extraFilters})` : ''}
+              <SlidersHorizontal className="size-4" />  {t('فلاتر')}{extraFilters ? ` (${extraFilters})` : ''}
             </Chip>
             {can('editor') && (
               <Chip active={selectMode} onClick={() => (selectMode ? (setSelectMode(false), setSelected(new Set())) : setSelectMode(true))}>
-                <CheckSquare className="size-4" /> تحديد
+                <CheckSquare className="size-4" />  {t('تحديد')}
               </Chip>
             )}
           </div>
@@ -225,10 +227,11 @@ export default function Invoices() {
         {data && !loading && (
           <div className="mb-3 mt-1 flex items-center justify-between px-1 text-[15px]">
             <span className="text-muted">
-              <span className="num font-semibold text-fg">{data.total}</span> فاتورة
+              <span className="num font-semibold text-fg">{t('{0} فاتورة', data.total)}</span>
             </span>
             <span className="text-muted">
-              المجموع <Money value={data.sum} className="font-bold text-fg" />
+              
+              {t('المجموع')} <Money value={data.sum} className="font-bold text-fg" />
             </span>
           </div>
         )}
@@ -237,12 +240,13 @@ export default function Invoices() {
         {!loading && data && !data.invoices.length && (
           <EmptyState
             icon={<FileText className="size-8" />}
-            title={anyFilter ? 'لا توجد نتائج' : 'لا توجد فواتير بعد'}
-            text={anyFilter ? 'جرّب تغيير البحث أو الفلاتر' : 'أضف فاتورة أو استورد ملف Excel من صفحة «إضافة»'}
+            title={anyFilter ? t('لا توجد نتائج') : t('لا توجد فواتير بعد')}
+            text={anyFilter ? t('جرّب تغيير البحث أو الفلاتر') : t('أضف فاتورة أو استورد ملف Excel من صفحة «إضافة»')}
             action={
               anyFilter && (
                 <Button variant="secondary" onClick={() => (setQ(''), setParams(new URLSearchParams(), { replace: true }))}>
-                  مسح الفلاتر
+                  
+                  {t('مسح الفلاتر')}
                 </Button>
               )
             }
@@ -286,19 +290,19 @@ export default function Invoices() {
               className="flex h-12 min-w-0 flex-1 items-center gap-2 rounded-2xl px-3 text-[15px] font-semibold"
               onClick={() => setSelected((s) => (s.size === data?.invoices.length ? new Set() : new Set(data?.invoices.map((i) => i.id))))}
             >
-              <span className="num text-primary">{selected.size}</span> محددة
-              <span className="text-[13px] font-normal text-muted">{selected.size === data?.invoices.length ? 'إلغاء الكل' : 'تحديد الكل'}</span>
+              <span className="text-primary">{t('{0} محددة', selected.size)}</span>
+              <span className="text-[13px] font-normal text-muted">{selected.size === data?.invoices.length ? t('إلغاء الكل') : t('تحديد الكل')}</span>
             </button>
-            <BulkBtn label="تصنيف" disabled={!selected.size} onClick={() => setSheet('bulkItem')}>
+            <BulkBtn label={t('تصنيف')} disabled={!selected.size} onClick={() => setSheet('bulkItem')}>
               <Tag className="size-5" />
             </BulkBtn>
-            <BulkBtn label="نقل" disabled={!selected.size} onClick={() => setSheet('bulkMove')}>
+            <BulkBtn label={t('نقل')} disabled={!selected.size} onClick={() => setSheet('bulkMove')}>
               <ArrowLeftRight className="size-5" />
             </BulkBtn>
-            <BulkBtn label="حذف" danger disabled={!selected.size} onClick={bulkDelete}>
+            <BulkBtn label={t('حذف')} danger disabled={!selected.size} onClick={bulkDelete}>
               <Trash2 className="size-5" />
             </BulkBtn>
-            <BulkBtn label="إغلاق" onClick={() => (setSelectMode(false), setSelected(new Set()))}>
+            <BulkBtn label={t('إغلاق')} onClick={() => (setSelectMode(false), setSelected(new Set()))}>
               <X className="size-5" />
             </BulkBtn>
           </div>
@@ -314,23 +318,23 @@ export default function Invoices() {
 
       <ExportSheet open={exportOpen} onClose={() => setExportOpen(false)} count={data?.total ?? 0} busy={exporting} onExport={doExport} />
 
-      <ItemPicker open={sheet === 'item'} onClose={() => setSheet(null)} storeId={currentStore} title="فلترة حسب الخدمة/المنتج" onPick={(i) => setParam({ item: String(i.id) })} />
+      <ItemPicker open={sheet === 'item'} onClose={() => setSheet(null)} storeId={currentStore} title={t('فلترة حسب الخدمة/المنتج')} onPick={(i) => setParam({ item: String(i.id) })} />
       <ItemPicker
         open={sheet === 'bulkItem'}
         onClose={() => setSheet(null)}
         storeId={commonStore}
-        title={`تحديد الخدمة/المنتج لـ ${selected.size} فاتورة`}
-        onPick={(i) => bulk({ action: 'assign_item', item_id: i.id }, `تم تحديد «${i.name}»`)}
+        title={t('تحديد الخدمة/المنتج لـ {0} فاتورة', selected.size)}
+        onPick={(i) => bulk({ action: 'assign_item', item_id: i.id }, t('تم تحديد «{0}»', i.name))}
       />
 
-      <Sheet open={sheet === 'bulkMove'} onClose={() => setSheet(null)} title={`نقل ${selected.size} فاتورة إلى متجر`}>
+      <Sheet open={sheet === 'bulkMove'} onClose={() => setSheet(null)} title={t('نقل {0} فاتورة إلى متجر', selected.size)}>
         <div className="space-y-1.5">
           {activeStores.map((s) => (
             <button
               key={s.id}
               onClick={() => {
                 setSheet(null)
-                bulk({ action: 'move_store', store_id: s.id }, `تم النقل إلى ${s.name}`)
+                bulk({ action: 'move_store', store_id: s.id }, t('تم النقل إلى {0}', s.name))
               }}
               className="flex h-14 w-full items-center gap-3 rounded-2xl px-4 text-[17px] font-medium hover:bg-surface-2"
             >
@@ -340,7 +344,7 @@ export default function Invoices() {
         </div>
       </Sheet>
 
-      <Sheet open={sheet === 'range'} onClose={() => setSheet(null)} title="الفترة">
+      <Sheet open={sheet === 'range'} onClose={() => setSheet(null)} title={t('الفترة')}>
         <RangePicker
           range={range}
           from={params.get('from') ?? ''}
@@ -352,22 +356,22 @@ export default function Invoices() {
         />
       </Sheet>
 
-      <Sheet open={sheet === 'filters'} onClose={() => setSheet(null)} title="فلاتر إضافية">
+      <Sheet open={sheet === 'filters'} onClose={() => setSheet(null)} title={t('فلاتر إضافية')}>
         <div className="space-y-4">
-          <Field label="النوع">
+          <Field label={t('النوع')}>
             <Segmented
               value={params.get('kind') ?? ''}
               onChange={(v) => setParam({ kind: v || null })}
               options={[
-                { value: '', label: 'الكل' },
-                { value: 'service', label: 'خدمات' },
-                { value: 'product', label: 'منتجات' },
+                { value: '', label: t('الكل') },
+                { value: 'service', label: t('خدمات') },
+                { value: 'product', label: t('منتجات') },
               ]}
             />
           </Field>
-          <Field label="التصنيف">
+          <Field label={t('التصنيف')}>
             <Select value={params.get('category') ?? ''} onChange={(e) => setParam({ category: e.target.value || null })}>
-              <option value="">الكل</option>
+              <option value="">{t('الكل')}</option>
               {categories.map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.name}
@@ -375,9 +379,9 @@ export default function Invoices() {
               ))}
             </Select>
           </Field>
-          <Field label="طريقة الدفع">
+          <Field label={t('طريقة الدفع')}>
             <Select value={params.get('pay_method') ?? ''} onChange={(e) => setParam({ pay_method: e.target.value || null })}>
-              <option value="">الكل</option>
+              <option value="">{t('الكل')}</option>
               {Object.entries(PAY_METHODS).map(([v, l]) => (
                 <option key={v} value={v}>
                   {l}
@@ -386,39 +390,41 @@ export default function Invoices() {
             </Select>
           </Field>
           <div className="grid grid-cols-2 gap-3">
-            <Field label="من مبلغ">
+            <Field label={t('من مبلغ')}>
               <Input inputMode="decimal" defaultValue={params.get('min') ?? ''} onBlur={(e) => setParam({ min: e.target.value || null })} className="num text-end" />
             </Field>
-            <Field label="إلى مبلغ">
+            <Field label={t('إلى مبلغ')}>
               <Input inputMode="decimal" defaultValue={params.get('max') ?? ''} onBlur={(e) => setParam({ max: e.target.value || null })} className="num text-end" />
             </Field>
           </div>
-          <Field label="المصدر">
+          <Field label={t('المصدر')}>
             <Segmented
               value={params.get('source') ?? ''}
               onChange={(v) => setParam({ source: v || null })}
               options={[
-                { value: '', label: 'الكل' },
-                { value: 'import', label: 'استيراد' },
-                { value: 'manual', label: 'يدوي' },
+                { value: '', label: t('الكل') },
+                { value: 'import', label: t('استيراد') },
+                { value: 'manual', label: t('يدوي') },
               ]}
             />
           </Field>
-          <Field label="الترتيب">
+          <Field label={t('الترتيب')}>
             <Select value={params.get('sort') ?? ''} onChange={(e) => setParam({ sort: e.target.value || null })}>
-              <option value="">الأحدث أولاً</option>
-              <option value="paid_asc">الأقدم أولاً</option>
-              <option value="amount_desc">الأعلى مبلغاً</option>
-              <option value="amount_asc">الأقل مبلغاً</option>
-              <option value="added_desc">آخر ما أُضيف</option>
+              <option value="">{t('الأحدث أولاً')}</option>
+              <option value="paid_asc">{t('الأقدم أولاً')}</option>
+              <option value="amount_desc">{t('الأعلى مبلغاً')}</option>
+              <option value="amount_asc">{t('الأقل مبلغاً')}</option>
+              <option value="added_desc">{t('آخر ما أُضيف')}</option>
             </Select>
           </Field>
           <div className="flex gap-3 pt-1">
             <Button block onClick={() => setSheet(null)}>
-              عرض النتائج
+              
+              {t('عرض النتائج')}
             </Button>
             <Button block variant="secondary" onClick={() => setParam({ kind: null, category: null, pay_method: null, source: null, min: null, max: null, sort: null })}>
-              مسح
+              
+              {t('مسح')}
             </Button>
           </div>
         </div>
@@ -452,7 +458,7 @@ export function RangePicker({
   onChange: (u: Record<string, string | null>) => void
 }) {
   const [f, setF] = useState(from)
-  const [t, setT] = useState(to)
+  const [until, setUntil] = useState(to)
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-2 gap-2">
@@ -467,17 +473,18 @@ export function RangePicker({
           </Chip>
         ))}
       </div>
-      <p className="pt-2 text-[15px] font-semibold">فترة مخصصة</p>
+      <p className="pt-2 text-[15px] font-semibold">{t('فترة مخصصة')}</p>
       <div className="grid grid-cols-2 gap-3">
-        <Field label="من">
+        <Field label={t('من')}>
           <Input type="date" value={f} onChange={(e) => setF(e.target.value)} className="num px-3" />
         </Field>
-        <Field label="إلى">
-          <Input type="date" value={t} onChange={(e) => setT(e.target.value)} className="num px-3" />
+        <Field label={t('إلى')}>
+          <Input type="date" value={until} onChange={(e) => setUntil(e.target.value)} className="num px-3" />
         </Field>
       </div>
-      <Button block disabled={!f && !t} onClick={() => onChange({ range: null, from: f || null, to: t || null })}>
-        تطبيق
+      <Button block disabled={!f && !until} onClick={() => onChange({ range: null, from: f || null, to: until || null })}>
+        
+        {t('تطبيق')}
       </Button>
     </div>
   )

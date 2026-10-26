@@ -15,6 +15,7 @@ import type { Invoice } from '../types'
 import { PALETTE } from '../lib/format'
 import type { LogoImage } from '../lib/image'
 import { load, save } from '../lib/storage'
+import { ARROW, t, tServer } from '../lib/i18n'
 
 type Tab = 'manual' | 'import'
 
@@ -28,15 +29,15 @@ export default function Add() {
   }
   return (
     <>
-      <TopBar title="إضافة فواتير" />
+      <TopBar title={t('إضافة فواتير')} />
       <Page width="medium">
         <Segmented
           className="lg:max-w-md"
           value={tab}
           onChange={choose}
           options={[
-            { value: 'manual', label: <><Plus className="size-5" /> إدخال يدوي</> },
-            { value: 'import', label: <><FileSpreadsheet className="size-5" /> استيراد Excel</> },
+            { value: 'manual', label: <><Plus className="size-5" />  {t('إدخال يدوي')}</> },
+            { value: 'import', label: <><FileSpreadsheet className="size-5" />  {t('استيراد Excel')}</> },
           ]}
         />
         <div className="mt-5">
@@ -124,7 +125,7 @@ function ImportPanel() {
       if (r.store_name && !storeByName.has(norm(r.store_name))) key = `n:${r.store_name.trim()}`
       else if (!r.store_name && r.terminal_id && !terminalStore.has(r.terminal_id)) key = `t:${r.terminal_id}`
       if (key) {
-        const e = keys.get(key) ?? { label: key.startsWith('t:') ? `جهاز رقم ${r.terminal_id}` : `متجر «${r.store_name}»`, count: 0 }
+        const e = keys.get(key) ?? { label: key.startsWith('t:') ? t('جهاز رقم {0}', r.terminal_id) : t('متجر «{0}»', r.store_name), count: 0 }
         e.count++
         keys.set(key, e)
       }
@@ -204,7 +205,7 @@ function ImportPanel() {
     setParsing(true)
     try {
       const { parseExcelFile } = await import('../lib/excel')
-      const parsed = await Promise.all([...list].map((f) => parseExcelFile(f).catch(() => ({ fileName: f.name, format: 'gateway' as const, rows: [], errors: ['تعذّرت قراءة الملف'], columns: [] }))))
+      const parsed = await Promise.all([...list].map((f) => parseExcelFile(f).catch(() => ({ fileName: f.name, format: 'gateway' as const, rows: [], errors: [t('تعذّرت قراءة الملف')], columns: [] }))))
       const merged = [...files, ...parsed.filter((p) => !files.some((f) => f.fileName === p.fileName))]
       setFiles(merged)
       const ids = merged.flatMap((f) => f.rows.map((r) => r.transaction_id))
@@ -238,7 +239,7 @@ function ImportPanel() {
         await api('catalog/items', { method: 'POST', body: { name, kind: 'service', store_id: storeId ?? null } })
       }
       await reloadCatalog()
-      toast(`تمت إضافة ${unmatchedItems.length} خدمة/منتج`)
+      toast(t('تمت إضافة {0} خدمة/منتج', unmatchedItems.length))
     } catch (e) {
       toast(errorMessage(e), 'error')
     } finally {
@@ -293,33 +294,35 @@ function ImportPanel() {
     return (
       <Card className="text-center">
         <CheckCircle2 className="mx-auto size-14 text-success" />
-        <p className="mt-3 text-[20px] font-bold">تم الاستيراد</p>
+        <p className="mt-3 text-[20px] font-bold">{t('تم الاستيراد')}</p>
         <p className="mt-1 text-[16px] text-muted">
           {result.inserted > 0 && (
             <>
-              أُضيفت <span className="num font-semibold text-fg">{result.inserted}</span> فاتورة
+              
+              <span className="font-semibold text-fg">{t('أُضيفت {0} فاتورة', result.inserted)}</span>
             </>
           )}
           {result.inserted > 0 && result.updated > 0 && ' · '}
           {result.updated > 0 && (
             <>
-              تم تحديث <span className="num font-semibold text-fg">{result.updated}</span> فاتورة
+              
+              <span className="font-semibold text-fg">{t('تم تحديث {0} فاتورة', result.updated)}</span>
             </>
           )}
-          {result.inserted === 0 && result.updated === 0 && 'لا توجد تغييرات'}
+          {result.inserted === 0 && result.updated === 0 && t('لا توجد تغييرات')}
           {result.skipped > 0 && (
             <>
-              {' '}· تم تجاهل <span className="num">{result.skipped}</span> مكررة
+              {' · '}{t('تم تجاهل {0} مكررة', result.skipped)}
             </>
           )}
         </p>
         {result.failed.length > 0 && (
           <div className="mt-4 rounded-2xl bg-danger-soft p-3 text-start text-[14px] text-danger">
-            <p className="font-semibold">تعذّر تحديث {result.failed.length} فاتورة:</p>
+            <p className="font-semibold">{t('تعذّر تحديث {0} فاتورة:', result.failed.length)}</p>
             <ul className="mt-1 list-disc space-y-0.5 ps-5">
               {result.failed.slice(0, 8).map((f) => (
                 <li key={f.id}>
-                  #<span className="num">{f.id}</span>: {f.message}
+                  #<span className="num">{f.id}</span>: {tServer(f.message)}
                 </li>
               ))}
             </ul>
@@ -328,16 +331,19 @@ function ImportPanel() {
         <div className="mt-6 space-y-3">
           {result.inserted > 0 && (
             <Button block size="lg" onClick={() => navigate('/invoices?unclassified=1&source=import')}>
-              حدد الخدمة/المنتج للفواتير الجديدة
+              
+              {t('حدد الخدمة/المنتج للفواتير الجديدة')}
             </Button>
           )}
           {result.inserted === 0 && (
             <Button block size="lg" onClick={() => navigate('/invoices')}>
-              عرض الفواتير
+              
+              {t('عرض الفواتير')}
             </Button>
           )}
           <Button block variant="secondary" onClick={reset}>
-            استيراد ملف آخر
+            
+            {t('استيراد ملف آخر')}
           </Button>
         </div>
       </Card>
@@ -363,17 +369,18 @@ function ImportPanel() {
             <span className="flex size-16 items-center justify-center rounded-3xl bg-primary text-primary-fg">
               <Upload className="size-8" />
             </span>
-            <span className="mt-4 text-[18px] font-bold">{parsing ? 'جاري قراءة الملفات…' : 'اختر ملفات Excel'}</span>
-            <span className="mt-1 max-w-xs text-[15px] text-muted">ملفات بوابة الدفع (Checkouts Paid) أو قالب النظام. لتعديل فواتير موجودة: صدّر الفواتير، عدّل الخلايا، ثم ارفع الملف هنا</span>
+            <span className="mt-4 text-[18px] font-bold">{parsing ? t('جاري قراءة الملفات…') : t('اختر ملفات Excel')}</span>
+            <span className="mt-1 max-w-xs text-[15px] text-muted">{t('ملفات بوابة الدفع (Checkouts Paid) أو قالب النظام. لتعديل فواتير موجودة: صدّر الفواتير، عدّل الخلايا، ثم ارفع الملف هنا')}</span>
           </button>
           <Card>
             <div className="flex items-start gap-3">
               <FileDown className="mt-0.5 size-6 shrink-0 text-primary" />
               <div className="flex-1">
-                <p className="text-[16px] font-semibold">إضافة فواتير كثيرة من Excel</p>
-                <p className="mt-0.5 text-[14px] text-muted">حمّل القالب، اكتب الفواتير فيه، ثم ارفعه هنا. الفواتير المكررة لا تُضاف مرتين.</p>
+                <p className="text-[16px] font-semibold">{t('إضافة فواتير كثيرة من Excel')}</p>
+                <p className="mt-0.5 text-[14px] text-muted">{t('حمّل القالب، اكتب الفواتير فيه، ثم ارفعه هنا. الفواتير المكررة لا تُضاف مرتين.')}</p>
                 <Button size="sm" variant="soft" className="mt-3" onClick={async () => (await import('../lib/excel')).downloadTemplate(activeStores.map((s) => s.name))}>
-                  تحميل القالب
+                  
+                  {t('تحميل القالب')}
                 </Button>
               </div>
             </div>
@@ -392,7 +399,7 @@ function ImportPanel() {
                     {f.fileName}
                   </p>
                   <p className="text-[13px] text-muted">
-                    <span className="num">{f.rows.length}</span> فاتورة · {f.format === 'gateway' ? 'ملف بوابة الدفع' : 'قالب النظام'}
+                    {t('{0} فاتورة', f.rows.length)} · {f.format === 'gateway' ? t('ملف بوابة الدفع') : t('قالب النظام')}
                   </p>
                   {f.errors.slice(0, 3).map((e) => (
                     <p key={e} className="text-[13px] text-danger">
@@ -401,7 +408,7 @@ function ImportPanel() {
                   ))}
                 </div>
                 {stage === 'review' && (
-                  <button aria-label="إزالة" className="p-1 text-muted" onClick={() => (files.length === 1 ? reset() : setFiles(files.filter((x) => x !== f)))}>
+                  <button aria-label={t('إزالة')} className="p-1 text-muted" onClick={() => (files.length === 1 ? reset() : setFiles(files.filter((x) => x !== f)))}>
                     <X className="size-5" />
                   </button>
                 )}
@@ -409,29 +416,30 @@ function ImportPanel() {
             ))}
             {stage === 'review' && (
               <Button variant="ghost" size="sm" icon={<Plus className="size-4" />} onClick={() => inputRef.current?.click()}>
-                إضافة ملف آخر
+                
+                {t('إضافة ملف آخر')}
               </Button>
             )}
           </div>
 
           {unknownKeys.size > 0 && (
             <Card>
-              <p className="mb-1 text-[16px] font-semibold">لأي متجر تتبع هذه الفواتير؟</p>
-              <p className="mb-3 text-[14px] text-muted">{can('admin') ? 'سيتذكر النظام اختيارك للأجهزة في المرات القادمة.' : 'اختر المتجر لكل مجموعة.'}</p>
+              <p className="mb-1 text-[16px] font-semibold">{t('لأي متجر تتبع هذه الفواتير؟')}</p>
+              <p className="mb-3 text-[14px] text-muted">{can('admin') ? t('سيتذكر النظام اختيارك للأجهزة في المرات القادمة.') : t('اختر المتجر لكل مجموعة.')}</p>
               <div className="space-y-3">
                 {[...unknownKeys].map(([key, info]) => (
-                  <Field key={key} label={`${info.label} — ${info.count} فاتورة`}>
+                  <Field key={key} label={t('{0} — {1} فاتورة', info.label, info.count)}>
                     <Select
                       value={mapping[key] ?? ''}
                       onChange={(e) => (e.target.value === 'new' ? setNewStoreFor(key) : setMapping((m) => ({ ...m, [key]: e.target.value })))}
                     >
-                      <option value="">اختر المتجر…</option>
+                      <option value="">{t('اختر المتجر…')}</option>
                       {activeStores.map((s) => (
                         <option key={s.id} value={s.id}>
                           {s.name}
                         </option>
                       ))}
-                      {can('admin') && <option value="new">+ متجر جديد…</option>}
+                      {can('admin') && <option value="new">{t('+ متجر جديد…')}</option>}
                     </Select>
                   </Field>
                 ))}
@@ -441,9 +449,9 @@ function ImportPanel() {
 
           {needsFallback && (
             <Card>
-              <Field label="المتجر الافتراضي" hint="للفواتير التي لا يُعرف متجرها من الملف">
+              <Field label={t('المتجر الافتراضي')} hint={t('للفواتير التي لا يُعرف متجرها من الملف')}>
                 <Select value={fallbackStore} onChange={(e) => setFallbackStore(e.target.value)}>
-                  <option value="">اختر المتجر…</option>
+                  <option value="">{t('اختر المتجر…')}</option>
                   {activeStores.map((s) => (
                     <option key={s.id} value={s.id}>
                       {s.name}
@@ -459,16 +467,17 @@ function ImportPanel() {
               <div className="flex items-start gap-3">
                 <AlertTriangle className="mt-0.5 size-5 shrink-0 text-warn" />
                 <div className="flex-1">
-                  <p className="text-[15px] font-semibold">خدمات/منتجات غير موجودة في القائمة</p>
+                  <p className="text-[15px] font-semibold">{t('خدمات/منتجات غير موجودة في القائمة')}</p>
                   <div className="mt-2 flex flex-wrap gap-1.5">
                     {unmatchedItems.slice(0, 12).map((n) => (
                       <Badge key={n}>{n}</Badge>
                     ))}
                   </div>
-                  <p className="mt-2 text-[13px] text-muted">إذا لم تُضفها، ستُستورد فواتيرها «غير مصنّفة».</p>
+                  <p className="mt-2 text-[13px] text-muted">{t('إذا لم تُضفها، ستُستورد فواتيرها «غير مصنّفة».')}</p>
                   {can('editor') && (
                     <Button size="sm" variant="soft" className="mt-3" loading={creatingItems} onClick={createMissingItems}>
-                      إضافتها للقائمة
+                      
+                      {t('إضافتها للقائمة')}
                     </Button>
                   )}
                 </div>
@@ -477,12 +486,12 @@ function ImportPanel() {
           )}
 
           <Card>
-            <p className="mb-3 text-[16px] font-semibold">ملخص الاستيراد</p>
+            <p className="mb-3 text-[16px] font-semibold">{t('ملخص الاستيراد')}</p>
             <div className={cx('grid gap-2 text-center', plans.updates.length ? 'grid-cols-2 sm:grid-cols-4' : 'grid-cols-3')}>
-              <Stat label="جديدة" value={summary.fresh} tone="success" />
-              {plans.updates.length > 0 && <Stat label="ستُحدَّث" value={updates.length} tone="primary" />}
-              <Stat label={plans.updates.length || plans.unchanged ? 'بدون تغيير / مكررة' : 'مكررة (تُتجاهل)'} value={summary.dup + plans.unchanged + (applyUpdates ? 0 : plans.updates.length)} />
-              <Stat label="بدون متجر" value={missingStore} tone={missingStore ? 'warn' : undefined} />
+              <Stat label={t('جديدة')} value={summary.fresh} tone="success" />
+              {plans.updates.length > 0 && <Stat label={t('ستُحدَّث')} value={updates.length} tone="primary" />}
+              <Stat label={plans.updates.length || plans.unchanged ? t('بدون تغيير / مكررة') : t('مكررة (تُتجاهل)')} value={summary.dup + plans.unchanged + (applyUpdates ? 0 : plans.updates.length)} />
+              <Stat label={t('بدون متجر')} value={missingStore} tone={missingStore ? 'warn' : undefined} />
             </div>
             <div className="mt-3 space-y-1.5">
               {[...summary.per].map(([sid, e]) => {
@@ -498,7 +507,7 @@ function ImportPanel() {
               })}
             </div>
             <div className="mt-3 flex items-center justify-between border-t border-line pt-3 text-[16px]">
-              <span className="text-muted">المجموع</span>
+              <span className="text-muted">{t('المجموع')}</span>
               <Money value={summary.sum} className="text-[18px] font-bold" />
             </div>
           </Card>
@@ -509,7 +518,7 @@ function ImportPanel() {
                 <AlertTriangle className="mt-0.5 size-5 shrink-0 text-warn" />
                 <div className="min-w-0 flex-1">
                   <p className="text-[15px] font-semibold">
-                    <span className="num">{plans.warned.length}</span> فاتورة بها خلايا لا يمكن تطبيقها
+                    {t('{0} فاتورة بها خلايا لا يمكن تطبيقها', plans.warned.length)}
                   </p>
                   <div className="mt-2 space-y-2">
                     {plans.warned.slice(0, 5).map((u) => (
@@ -527,9 +536,10 @@ function ImportPanel() {
                 <Pencil className="mt-0.5 size-5 shrink-0 text-primary" />
                 <div className="min-w-0 flex-1">
                   <p className="text-[16px] font-semibold">
-                    تعديلات على <span className="num">{plans.updates.length}</span> فاتورة موجودة
+                    
+                    {t('تعديلات على {0} فاتورة موجودة', plans.updates.length)}
                   </p>
-                  <p className="text-[13px] text-muted">الخلايا التي تغيّرت في الملف مقارنةً بالبيانات الحالية. الفواتير بدون تغيير لا تُلمس.</p>
+                  <p className="text-[13px] text-muted">{t('الخلايا التي تغيّرت في الملف مقارنةً بالبيانات الحالية. الفواتير بدون تغيير لا تُلمس.')}</p>
                 </div>
               </div>
               <div className="mt-3 space-y-2">
@@ -539,11 +549,12 @@ function ImportPanel() {
               </div>
               {plans.updates.length > 5 && (
                 <Button variant="ghost" size="sm" className="mt-2" onClick={() => setShowAllUpdates(true)}>
-                  عرض كل التعديلات ({plans.updates.length})
+                  
+                  {t('عرض كل التعديلات ({0})', plans.updates.length)}
                 </Button>
               )}
               <div className="mt-2 border-t border-line pt-1">
-                <Switch checked={applyUpdates} onChange={setApplyUpdates} label="تطبيق هذه التعديلات" />
+                <Switch checked={applyUpdates} onChange={setApplyUpdates} label={t('تطبيق هذه التعديلات')} />
               </div>
             </Card>
           )}
@@ -551,7 +562,8 @@ function ImportPanel() {
           {stage === 'importing' ? (
             <Card>
               <p className="mb-2 text-[15px] font-semibold">
-                جاري الاستيراد… <span className="num">{progress.done}</span> / <span className="num">{progress.total}</span>
+                
+                {t('جاري الاستيراد…')} <span className="num">{progress.done}</span> / <span className="num">{progress.total}</span>
               </p>
               <div className="h-3 overflow-hidden rounded-full bg-surface-2">
                 <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${progress.total ? (progress.done / progress.total) * 100 : 0}%` }} />
@@ -560,20 +572,21 @@ function ImportPanel() {
           ) : (
             <div className="flex gap-3">
               <Button size="lg" block disabled={!summary.fresh && !updates.length} onClick={run}>
-                {summary.fresh > 0 && `استيراد ${summary.fresh} فاتورة`}
-                {summary.fresh > 0 && updates.length > 0 && ' و'}
-                {updates.length > 0 && `تحديث ${updates.length} فاتورة`}
-                {!summary.fresh && !updates.length && 'لا توجد تغييرات للاستيراد'}
+                {summary.fresh > 0 && t('استيراد {0} فاتورة', summary.fresh)}
+                {summary.fresh > 0 && updates.length > 0 && t(' و')}
+                {updates.length > 0 && t('تحديث {0} فاتورة', updates.length)}
+                {!summary.fresh && !updates.length && t('لا توجد تغييرات للاستيراد')}
               </Button>
               <Button size="lg" variant="secondary" onClick={reset}>
-                إلغاء
+                
+                {t('إلغاء')}
               </Button>
             </div>
           )}
         </>
       )}
 
-      <Sheet open={showAllUpdates} onClose={() => setShowAllUpdates(false)} title={`التعديلات (${plans.updates.length})`}>
+      <Sheet open={showAllUpdates} onClose={() => setShowAllUpdates(false)} title={t('التعديلات ({0})', plans.updates.length)}>
         <div className="space-y-2">
           {plans.updates.map((u) => (
             <UpdateRow key={u.invoice.id} update={u} />
@@ -601,14 +614,14 @@ function UpdateRow({ update }: { update: RowUpdate }) {
   return (
     <div className="rounded-2xl bg-surface-2 px-3 py-2.5 text-[14px]">
       <p className="font-semibold">
-        {invoice.customer_name || 'بدون اسم'} <span className="num font-normal text-muted">· {invoice.invoice_no ? `#${invoice.invoice_no}` : `معرّف ${invoice.id}`}</span>
+        {invoice.customer_name || t('بدون اسم')} <span className="num font-normal text-muted">· {invoice.invoice_no ? `#${invoice.invoice_no}` : t('معرّف {0}', invoice.id)}</span>
       </p>
       <ul className="mt-1 space-y-0.5">
         {changes.map((c) => (
           <li key={c.field} className="flex flex-wrap items-baseline gap-x-1.5">
             <span className="text-muted">{c.label}:</span>
             <span className="text-muted line-through">{c.from}</span>
-            <span className="text-muted">←</span>
+            <span className="text-muted">{ARROW}</span>
             <span className="font-medium text-primary">{c.to}</span>
           </li>
         ))}
@@ -646,12 +659,12 @@ export function NewStoreSheet({ open, onClose, onCreated, defaultName = '' }: { 
     setSaving(true)
     try {
       const r = await api<{ id: number }>('stores', { method: 'POST', body: { name, color } })
-      toast(`تمت إضافة متجر ${name}`)
+      toast(t('تمت إضافة متجر {0}', name))
       if (logo) {
         try {
           await api(`stores/${r.id}/logo`, { method: 'POST', body: { data: logo.dataUrl, bg: logo.bg } })
         } catch (e) {
-          toast(`تمت إضافة المتجر لكن تعذّر رفع الشعار: ${errorMessage(e)}`, 'error')
+          toast(t('تمت إضافة المتجر لكن تعذّر رفع الشعار: {0}', errorMessage(e)), 'error')
         }
       }
       setName('')
@@ -667,21 +680,22 @@ export function NewStoreSheet({ open, onClose, onCreated, defaultName = '' }: { 
     <Sheet
       open={open}
       onClose={onClose}
-      title="متجر جديد"
+      title={t('متجر جديد')}
       footer={
         <Button block size="lg" loading={saving} disabled={!name.trim()} onClick={save}>
-          إضافة المتجر
+          
+          {t('إضافة المتجر')}
         </Button>
       }
     >
       <div className="space-y-4">
-        <Field label="اسم المتجر" required>
+        <Field label={t('اسم المتجر')} required>
           <Input autoFocus value={name} onChange={(e) => setName(e.target.value)} />
         </Field>
-        <Field label="الشعار (اختياري)">
+        <Field label={t('الشعار (اختياري)')}>
           <LogoPicker name={name} color={color} src={logo?.dataUrl ?? null} bg={logo?.bg} onPick={setLogo} onRemove={() => setLogo(null)} />
         </Field>
-        <Field label="اللون">
+        <Field label={t('اللون')}>
           <ColorPicker value={color} onChange={setColor} />
         </Field>
       </div>

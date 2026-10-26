@@ -8,11 +8,12 @@ import { Sheet } from '../../components/Sheet'
 import { Badge, Button, Card, EmptyState, Field, Input, PageLoader, Segmented, Switch } from '../../components/ui'
 import { ROLE_LABELS, fmtDateTime } from '../../lib/format'
 import type { Activity, Role, User } from '../../types'
+import { t, tServer } from '../../lib/i18n'
 
 const ROLE_HELP: Record<Role, string> = {
-  admin: 'كل الصلاحيات: المتاجر، المستخدمون، الحذف، والإعدادات',
-  editor: 'إضافة واستيراد وتعديل وحذف الفواتير وتصنيفها',
-  viewer: 'بحث وعرض وتقارير وتصدير فقط',
+  admin: t('كل الصلاحيات: المتاجر، المستخدمون، الحذف، والإعدادات'),
+  editor: t('إضافة واستيراد وتعديل وحذف الفواتير وتصنيفها'),
+  viewer: t('بحث وعرض وتقارير وتصدير فقط'),
 }
 
 export function UsersSettings() {
@@ -30,11 +31,12 @@ export function UsersSettings() {
   return (
     <>
       <TopBar
-        title="المستخدمون"
+        title={t('المستخدمون')}
         back
         actions={
           <Button size="sm" icon={<Plus className="size-5" />} onClick={() => setEdit('new')}>
-            مستخدم
+            
+            {t('مستخدم')}
           </Button>
         }
       />
@@ -46,13 +48,13 @@ export function UsersSettings() {
               <span className="flex size-12 items-center justify-center rounded-full bg-primary-soft text-[18px] font-bold text-primary">{u.display_name.slice(0, 1)}</span>
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-[16px] font-semibold">
-                  {u.display_name} {u.id === me.id && <span className="text-[13px] text-muted">(أنت)</span>}
+                  {u.display_name} {u.id === me.id && <span className="text-[13px] text-muted">{t('(أنت)')}</span>}
                 </span>
                 <span className="num block text-[13px] text-muted">@{u.username}</span>
               </span>
               <span className="flex flex-col items-end gap-1">
                 <Badge tone={u.role === 'admin' ? 'primary' : 'neutral'}>{ROLE_LABELS[u.role]}</Badge>
-                {!u.is_active && <Badge tone="warn">موقوف</Badge>}
+                {!u.is_active && <Badge tone="warn">{t('موقوف')}</Badge>}
               </span>
             </Card>
           ))}
@@ -91,7 +93,7 @@ function UserSheet({ target, onClose, onSaved }: { target: User | null; onClose:
     try {
       if (target) await api(`users/${target.id}`, { method: 'PUT', body: f })
       else await api('users', { method: 'POST', body: f })
-      toast('تم الحفظ')
+      toast(t('تم الحفظ'))
       onSaved()
     } catch (e) {
       toast(errorMessage(e), 'error')
@@ -102,11 +104,11 @@ function UserSheet({ target, onClose, onSaved }: { target: User | null; onClose:
 
   const remove = async () => {
     if (!target) return
-    const ok = await confirm({ title: `حذف ${target.display_name}؟`, text: 'إذا كان له نشاط سابق سيتم إيقاف الحساب بدل حذفه للحفاظ على السجل.', confirmLabel: 'حذف', danger: true })
+    const ok = await confirm({ title: t('حذف {0}؟', target.display_name), text: t('إذا كان له نشاط سابق سيتم إيقاف الحساب بدل حذفه للحفاظ على السجل.'), confirmLabel: t('حذف'), danger: true })
     if (!ok) return
     try {
       const r = await api<{ deactivated?: boolean }>(`users/${target.id}`, { method: 'DELETE' })
-      toast(r.deactivated ? 'تم إيقاف الحساب' : 'تم الحذف')
+      toast(r.deactivated ? t('تم إيقاف الحساب') : t('تم الحذف'))
       onSaved()
     } catch (e) {
       toast(errorMessage(e), 'error')
@@ -120,14 +122,15 @@ function UserSheet({ target, onClose, onSaved }: { target: User | null; onClose:
     <Sheet
       open
       onClose={onClose}
-      title={target ? target.display_name : 'مستخدم جديد'}
+      title={target ? target.display_name : t('مستخدم جديد')}
       footer={
         <div className="flex gap-3">
           <Button block size="lg" loading={saving} disabled={!valid} onClick={save}>
-            حفظ
+            
+            {t('حفظ')}
           </Button>
           {target && !self && (
-            <Button size="lg" variant="danger" onClick={remove} aria-label="حذف">
+            <Button size="lg" variant="danger" onClick={remove} aria-label={t('حذف')}>
               <Trash2 className="size-5" />
             </Button>
           )}
@@ -135,10 +138,10 @@ function UserSheet({ target, onClose, onSaved }: { target: User | null; onClose:
       }
     >
       <div className="space-y-4">
-        <Field label="الاسم" required>
+        <Field label={t('الاسم')} required>
           <Input value={f.display_name} onChange={(e) => setF({ ...f, display_name: e.target.value })} />
         </Field>
-        <Field label="اسم المستخدم (للدخول)" required hint="أحرف إنجليزية أو أرقام">
+        <Field label={t('اسم المستخدم (للدخول)')} required hint={t('أحرف إنجليزية أو أرقام')}>
           <Input
             value={f.username}
             disabled={!!target}
@@ -149,11 +152,11 @@ function UserSheet({ target, onClose, onSaved }: { target: User | null; onClose:
             className="num"
           />
         </Field>
-        <Field label={target ? 'كلمة مرور جديدة (اتركها فارغة بدون تغيير)' : 'كلمة المرور'} required={!target} hint="8 أحرف على الأقل">
+        <Field label={target ? t('كلمة مرور جديدة (اتركها فارغة بدون تغيير)') : t('كلمة المرور')} required={!target} hint={t('8 أحرف على الأقل')}>
           <Input type="password" autoComplete="new-password" value={f.password} onChange={(e) => setF({ ...f, password: e.target.value })} />
         </Field>
         {!self && (
-          <Field label="الصلاحية" hint={ROLE_HELP[f.role]}>
+          <Field label={t('الصلاحية')} hint={ROLE_HELP[f.role]}>
             <Segmented
               value={f.role}
               onChange={(role) => setF({ ...f, role })}
@@ -163,8 +166,8 @@ function UserSheet({ target, onClose, onSaved }: { target: User | null; onClose:
         )}
         {f.role !== 'admin' && (
           <div>
-            <p className="mb-1 text-[15px] font-medium">المتاجر المسموحة</p>
-            <p className="mb-2 text-[13px] text-muted">بدون اختيار = كل المتاجر</p>
+            <p className="mb-1 text-[15px] font-medium">{t('المتاجر المسموحة')}</p>
+            <p className="mb-2 text-[13px] text-muted">{t('بدون اختيار = كل المتاجر')}</p>
             <div className="divide-y divide-line rounded-2xl border border-line px-4">
               {activeStores.map((s) => (
                 <Switch key={s.id} checked={f.store_ids.includes(s.id)} onChange={() => toggleStore(s.id)} label={s.name} />
@@ -172,8 +175,8 @@ function UserSheet({ target, onClose, onSaved }: { target: User | null; onClose:
             </div>
           </div>
         )}
-        {target && !self && <Switch checked={f.is_active} onChange={(is_active) => setF({ ...f, is_active })} label="الحساب نشط" />}
-        {target?.last_login_at && <p className="text-[13px] text-muted">آخر دخول: {fmtDateTime(target.last_login_at)}</p>}
+        {target && !self && <Switch checked={f.is_active} onChange={(is_active) => setF({ ...f, is_active })} label={t('الحساب نشط')} />}
+        {target?.last_login_at && <p className="text-[13px] text-muted">{t('آخر دخول:')} {fmtDateTime(target.last_login_at)}</p>}
       </div>
     </Sheet>
   )
@@ -197,15 +200,15 @@ export function ActivityPage() {
   }, [page, toast])
   return (
     <>
-      <TopBar title="سجل النشاط" back />
+      <TopBar title={t('سجل النشاط')} back />
       <Page width="medium">
-        {!loading && !rows.length && <EmptyState icon={<History className="size-8" />} title="لا يوجد نشاط بعد" />}
+        {!loading && !rows.length && <EmptyState icon={<History className="size-8" />} title={t('لا يوجد نشاط بعد')} />}
         <div className="space-y-2">
           {rows.map((a) => (
             <div key={a.id} className="flex gap-3 rounded-2xl border border-line bg-surface p-3.5">
               <UserRound className="mt-0.5 size-5 shrink-0 text-muted" />
               <div className="min-w-0 flex-1">
-                <p className="text-[15px] font-medium">{a.summary}</p>
+                <p className="text-[15px] font-medium">{a.summary ? tServer(a.summary) : ''}</p>
                 <p className="mt-0.5 text-[13px] text-muted">
                   {a.user_name ?? '—'} · {fmtDateTime(a.created_at)}
                 </p>
@@ -216,7 +219,8 @@ export function ActivityPage() {
         {loading && <PageLoader />}
         {!loading && !done && rows.length > 0 && (
           <Button block variant="secondary" className="mt-4" onClick={() => setPage((p) => p + 1)}>
-            عرض المزيد
+            
+            {t('عرض المزيد')}
           </Button>
         )}
       </Page>

@@ -5,13 +5,14 @@ import { ROLE_LABELS } from '../lib/format'
 import { useApp } from '../context'
 import { Sheet } from './Sheet'
 import { IconButton, StoreDot, cx } from './ui'
+import { t } from '../lib/i18n'
 
 const NAV = [
-  { to: '/', label: 'الرئيسية', icon: Home, end: true },
-  { to: '/invoices', label: 'الفواتير', icon: FileText },
-  { to: '/add', label: 'إضافة', icon: Plus, center: true },
-  { to: '/reports', label: 'التقارير', icon: BarChart3 },
-  { to: '/settings', label: 'الإعدادات', icon: Settings },
+  { to: '/', label: t('الرئيسية'), icon: Home, end: true },
+  { to: '/invoices', label: t('الفواتير'), icon: FileText },
+  { to: '/add', label: t('إضافة'), icon: Plus, center: true },
+  { to: '/reports', label: t('التقارير'), icon: BarChart3 },
+  { to: '/settings', label: t('الإعدادات'), icon: Settings },
 ]
 
 export function BottomNav() {
@@ -70,7 +71,7 @@ export function Sidebar() {
         <span className="flex size-10 items-center justify-center rounded-xl bg-primary text-primary-fg shadow-md shadow-primary/25">
           <FileText className="size-5" />
         </span>
-        <span className="text-[18px] font-bold">إدارة الفواتير</span>
+        <span className="text-[18px] font-bold">{t('إدارة الفواتير')}</span>
       </div>
 
       {can('editor') && (
@@ -84,7 +85,7 @@ export function Sidebar() {
               )
             }
           >
-            <Plus className="size-5" strokeWidth={2.5} /> إضافة فواتير
+            <Plus className="size-5" strokeWidth={2.5} />  {t('إضافة فواتير')}
           </NavLink>
         </div>
       )}
@@ -154,8 +155,8 @@ export function TopBar({ title, back, switcher, actions }: { title: string; back
     <header className="safe-top sticky top-0 z-30 bg-bg/90 backdrop-blur-md">
       <div className="mx-auto flex min-h-16 max-w-2xl items-center gap-2 px-4 lg:min-h-[72px] lg:max-w-6xl lg:px-8">
         {back && (
-          <IconButton label="رجوع" onClick={() => navigate(-1)} className="-ms-2">
-            <ChevronRight className="size-7" />
+          <IconButton label={t('رجوع')} onClick={() => navigate(-1)} className="-ms-2">
+            <ChevronRight className="size-7 ltr:rotate-180" />
           </IconButton>
         )}
         <h1 className="min-w-0 flex-1 truncate text-[24px] font-bold lg:text-[26px]">{title}</h1>
@@ -178,12 +179,12 @@ function StoreSwitcher() {
         className="flex h-11 max-w-[50%] items-center gap-2 rounded-full border border-line bg-surface px-3.5 text-[15px] font-semibold shadow-card hover:bg-surface-2 active:scale-95 lg:max-w-xs"
       >
         {current ? <StoreDot color={current.color} storeId={current.id} /> : <StoreIcon className="size-4 text-muted" />}
-        <span className="truncate">{current?.name ?? 'كل المتاجر'}</span>
+        <span className="truncate">{current?.name ?? t('كل المتاجر')}</span>
         <ChevronDown className="size-4 shrink-0 text-muted" />
       </button>
-      <Sheet open={open} onClose={() => setOpen(false)} title="اختر المتجر">
+      <Sheet open={open} onClose={() => setOpen(false)} title={t('اختر المتجر')}>
         <div className="space-y-1.5">
-          {[{ id: null as number | null, name: 'كل المتاجر', color: '' }, ...activeStores].map((s) => (
+          {[{ id: null as number | null, name: t('كل المتاجر'), color: '' }, ...activeStores].map((s) => (
             <button
               key={s.id ?? 'all'}
               onClick={() => {
@@ -233,7 +234,7 @@ export function OfflineBanner() {
   if (online) return null
   return (
     <div className="safe-top fixed inset-x-0 top-0 z-[55] flex items-center justify-center gap-2 bg-warn px-4 py-2 text-[14px] font-semibold text-white">
-      <WifiOff className="size-4" /> لا يوجد اتصال بالإنترنت — البيانات تحتاج اتصالاً
+      <WifiOff className="size-4" />  {t('لا يوجد اتصال بالإنترنت — البيانات تحتاج اتصالاً')}
     </div>
   )
 }

@@ -1,6 +1,7 @@
 import type { CatalogItem, Invoice } from '../types'
 import type { ParsedRow } from './excel'
 import { money, payLabel } from './format'
+import { isEn, t } from './i18n'
 
 export interface Change {
   field: string
@@ -20,16 +21,16 @@ export interface RowUpdate {
 }
 
 const TEXT_FIELDS = [
-  ['customer_name', 'اسم العميل'],
-  ['phone', 'الجوال'],
-  ['email', 'الإيميل'],
-  ['invoice_no', 'رقم الفاتورة'],
-  ['pay_method', 'طريقة الدفع'],
-  ['note', 'ملاحظة'],
-  ['card_type', 'نوع البطاقة'],
-  ['card_last4', 'آخر 4 أرقام'],
-  ['reference_no', 'الرقم المرجعي'],
-  ['auth_code', 'رمز التفويض'],
+  ['customer_name', t('اسم العميل')],
+  ['phone', t('الجوال')],
+  ['email', t('الإيميل')],
+  ['invoice_no', t('رقم الفاتورة')],
+  ['pay_method', t('طريقة الدفع')],
+  ['note', t('ملاحظة')],
+  ['card_type', t('نوع البطاقة')],
+  ['card_last4', t('آخر 4 أرقام')],
+  ['reference_no', t('الرقم المرجعي')],
+  ['auth_code', t('رمز التفويض')],
 ] as const
 
 const clean = (v: string | null | undefined) => (v ?? '').trim()
@@ -43,7 +44,7 @@ function sameText(a: string | null | undefined, b: string | null | undefined) {
 }
 
 const norm = (s: string) => s.trim().toLowerCase()
-const splitItems = (s: string | null | undefined) => (s ?? '').split(/\s*[،\n]\s*/).map((x) => x.trim()).filter(Boolean)
+const splitItems = (s: string | null | undefined) => (s ?? '').split(/\s*[،|\n]\s*/).map((x) => x.trim()).filter(Boolean)
 const show = (v: string | null | undefined) => (clean(v) === '' ? '—' : clean(v))
 
 /**
@@ -66,13 +67,13 @@ export function planUpdate(
   }
 
   if (has('store_id') && ctx.newStoreId && ctx.newStoreId !== inv.store_id) {
-    add('store_id', 'المتجر', inv.store_name, ctx.storeName(ctx.newStoreId), ctx.newStoreId)
+    add('store_id', t('المتجر'), inv.store_name, ctx.storeName(ctx.newStoreId), ctx.newStoreId)
   }
   if (has('paid_at') && row.paid_at && row.paid_at.slice(0, 16) !== (inv.paid_at ?? '').slice(0, 16)) {
-    add('paid_at', 'التاريخ', (inv.paid_at ?? '—').slice(0, 16), row.paid_at.slice(0, 16), row.paid_at)
+    add('paid_at', t('التاريخ'), (inv.paid_at ?? '—').slice(0, 16), row.paid_at.slice(0, 16), row.paid_at)
   }
   const amountChanged = has('amount') && Math.abs(row.amount - inv.amount) > 0.004
-  if (amountChanged) add('amount', 'المبلغ', money(inv.amount), money(row.amount), row.amount)
+  if (amountChanged) add('amount', t('المبلغ'), money(inv.amount), money(row.amount), row.amount)
 
   for (const [f, label] of TEXT_FIELDS) {
     if (!has(f)) continue
@@ -94,13 +95,13 @@ export function planUpdate(
       const resolved = wanted.map((w) => ctx.items.find((i) => i.is_active && norm(i.name) === norm(w) && (i.store_id === null || i.store_id === storeId)))
       const missing = wanted.filter((_, k) => !resolved[k])
       if (missing.length) {
-        warnings.push(`الخدمة/المنتج «${missing.join('، ')}» غير موجود في القائمة، لن تتغير الخدمة`)
+        warnings.push(t('الخدمة/المنتج «{0}» غير موجود في القائمة، لن تتغير الخدمة', missing.join(isEn ? ', ' : '، ')))
       } else {
         patch.items = resolved.map((it) => {
           const keep = inv.lines.find((l) => l.item_id === it!.id)
           return keep ? { item_id: it!.id, qty: keep.qty, unit_price: keep.unit_price } : { item_id: it!.id }
         })
-        changes.push({ field: 'item', label: 'الخدمة/المنتج', from: current.join('، ') || '—', to: wanted.join('، ') || '—' })
+        changes.push({ field: 'item', label: t('الخدمة/المنتج'), from: current.join(isEn ? ', ' : '، ') || '—', to: wanted.join(isEn ? ', ' : '، ') || '—' })
       }
     }
   }
