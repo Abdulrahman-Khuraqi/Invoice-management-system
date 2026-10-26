@@ -1,16 +1,16 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Package, Plus, Search, Trash2, Wrench } from 'lucide-react'
 import { api, errorMessage } from '../../api'
 import { useApp } from '../../context'
 import { useFeedback } from '../../components/Feedback'
 import { Page, TopBar } from '../../components/Layout'
 import { Sheet } from '../../components/Sheet'
-import { Badge, Button, ColorPicker, EmptyState, Field, Input, Segmented, Select, Switch, Textarea, cx } from '../../components/ui'
+import { Badge, Button, ColorPicker, EmptyState, Field, Input, Segmented, Select, StoreDot, Switch, Textarea, cx } from '../../components/ui'
 import { KIND_LABELS, money } from '../../lib/format'
 import type { CatalogItem, Category, ItemKind } from '../../types'
 
 export default function CatalogSettings() {
-  const { items, categories, can } = useApp()
+  const { items, categories, can, currentStore, storeById } = useApp()
   const [tab, setTab] = useState<'items' | 'categories'>('items')
   const [q, setQ] = useState('')
   const [kind, setKind] = useState<'all' | ItemKind>('all')
@@ -18,10 +18,23 @@ export default function CatalogSettings() {
   const [editItem, setEditItem] = useState<CatalogItem | 'new' | null>(null)
   const [editCat, setEditCat] = useState<Category | 'new' | null>(null)
 
+  // Default view: the store picked in the top switcher. "كل المتاجر" shows everything.
+  const store = storeById(currentStore)
+  const [scope, setScope] = useState<'store' | 'all'>('store')
+  useEffect(() => setScope('store'), [currentStore])
+  const byStore = !!store && scope === 'store'
+
   const list = useMemo(() => {
     const t = q.trim().toLowerCase()
-    return items.filter((i) => (showArchived || i.is_active) && (kind === 'all' || i.kind === kind) && (!t || i.name.toLowerCase().includes(t)))
-  }, [items, q, kind, showArchived])
+    return items.filter(
+      (i) =>
+        (showArchived || i.is_active) &&
+        (kind === 'all' || i.kind === kind) &&
+        // Items without a store are shared by every store, so they belong to this store's list too.
+        (!byStore || i.store_id === null || i.store_id === currentStore) &&
+        (!t || i.name.toLowerCase().includes(t)),
+    )
+  }, [items, q, kind, showArchived, byStore, currentStore])
 
   return (
     <>
@@ -48,6 +61,20 @@ export default function CatalogSettings() {
         />
         {tab === 'items' ? (
           <div className="mt-4 space-y-3">
+            {store && (
+              <div>
+                <Segmented
+                  className="lg:max-w-md"
+                  value={scope}
+                  onChange={setScope}
+                  options={[
+                    { value: 'store', label: <><StoreDot color={store.color} storeId={store.id} /> <span className="truncate">{store.name}</span></> },
+                    { value: 'all', label: 'كل المتاجر' },
+                  ]}
+                />
+                {byStore && <p className="mt-1.5 px-1 text-[13px] text-muted">خدمات ومنتجات هذا المتجر، مع المشتركة بين كل المتاجر.</p>}
+              </div>
+            )}
             <div className="relative">
               <Search className="pointer-events-none absolute start-4 top-1/2 size-5 -translate-y-1/2 text-muted" />
               <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="ابحث…" className="ps-12" />
@@ -68,7 +95,16 @@ export default function CatalogSettings() {
                 icon={<Package className="size-8" />}
                 title="لا توجد خدمات أو منتجات"
                 text="أضف ما تبيعه في متاجرك، ثم اربط كل فاتورة بخدمتها أو منتجها"
-                action={can('editor') && <Button onClick={() => setEditItem('new')}>إضافة أول عنصر</Button>}
+                action={
+                  <div className="flex flex-wrap justify-center gap-2">
+                    {can('editor') && <Button onClick={() => setEditItem('new')}>إضافة {byStore ? 'عنصر لهذا المتجر' : 'أول عنصر'}</Button>}
+                    {byStore && (
+                      <Button variant="secondary" onClick={() => setScope('all')}>
+                        عرض كل المتاجر
+                      </Button>
+                    )}
+                  </div>
+                }
               />
             )}
             <div className="space-y-2 lg:grid lg:grid-cols-2 lg:gap-3 lg:space-y-0">
@@ -118,13 +154,13 @@ export default function CatalogSettings() {
           </div>
         )}
       </Page>
-      {editItem && <ItemSheet item={editItem === 'new' ? null : editItem} onClose={() => setEditItem(null)} />}
+      {editItem && <ItemSheet item={editItem === 'new' ? null : editItem} defaultStoreId={byStore ? currentStore : null} onClose={() => setEditItem(null)} />}
       {editCat && <CategorySheet category={editCat === 'new' ? null : editCat} onClose={() => setEditCat(null)} />}
     </>
   )
 }
 
-function ItemSheet({ item, onClose }: { item: CatalogItem | null; onClose: () => void }) {
+function ItemSheet({ item, defaultStoreId, onClose }: { item: CatalogItem | null; defaultStoreId?: number | null; onClose: () => void }) {
   const { categories, activeStores, reloadCatalog, user } = useApp()
   const { toast, confirm } = useFeedback()
   const restricted = user.role !== 'admin' && user.store_ids.length > 0
@@ -132,7 +168,7 @@ function ItemSheet({ item, onClose }: { item: CatalogItem | null; onClose: () =>
     kind: item?.kind ?? ('service' as ItemKind),
     name: item?.name ?? '',
     category_id: item?.category_id ? String(item.category_id) : '',
-    store_id: item?.store_id ? String(item.store_id) : restricted ? String(user.store_ids[0]) : '',
+    store_id: item?.store_id ? String(item.store_id) : !item && defaultStoreId ? String(defaultStoreId) : restricted ? String(user.store_ids[0]) : '',
     default_price: item?.default_price !== null && item?.default_price !== undefined ? String(item.default_price) : '',
     sku: item?.sku ?? '',
     description: item?.description ?? '',
