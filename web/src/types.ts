@@ -33,6 +33,8 @@ export interface Store {
   color: string
   is_active: boolean
   sort: number
+  /** 2-4 letters that start this store's invoice numbers. */
+  code: string
   invoice_count: number
   /** Version stamp of the uploaded logo (used in its URL); null = no logo. */
   logo_v: number | null
@@ -86,6 +88,8 @@ export interface Invoice {
   store_id: number
   transaction_id: string | null
   invoice_no: string | null
+  /** System-generated unique number, e.g. ARV-261009-0001. Never changes. */
+  doc_no: string | null
   customer_name: string | null
   email: string | null
   phone: string | null

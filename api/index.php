@@ -15,6 +15,7 @@ header('Cache-Control: no-store');
 require __DIR__ . '/lib/http.php';
 require __DIR__ . '/lib/db.php';
 require __DIR__ . '/lib/auth.php';
+require __DIR__ . '/lib/numbering.php';
 foreach (glob(__DIR__ . '/routes/*.php') as $file) {
     require $file;
 }

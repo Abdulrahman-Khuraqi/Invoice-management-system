@@ -1,13 +1,14 @@
 <?php
 defined('APP') or exit;
 
-const INVOICE_COLUMNS = 'i.id, i.store_id, i.transaction_id, i.invoice_no, i.customer_name, i.email, i.phone, i.amount,
+const INVOICE_COLUMNS = 'i.id, i.store_id, i.transaction_id, i.invoice_no, n.doc_no, i.customer_name, i.email, i.phone, i.amount,
     i.status, i.pay_method, i.card_type, i.card_last4, i.terminal_id, i.reference_no, i.auth_code,
     i.created_at_src, i.paid_at, i.note, i.source, i.created_at, i.updated_at,
     s.name AS store_name, s.color AS store_color, cu.display_name AS created_by_name, uu.display_name AS updated_by_name';
 
 const INVOICE_FROM = 'FROM invoices i
     JOIN stores s ON s.id = i.store_id
+    LEFT JOIN invoice_numbers n ON n.invoice_id = i.id
     LEFT JOIN users cu ON cu.id = i.created_by
     LEFT JOIN users uu ON uu.id = i.updated_by';
 
@@ -39,10 +40,11 @@ function invoice_filters(array $u, array $in): array
         $cols = ['i.customer_name', 'i.phone', 'i.email', 'i.invoice_no', 'i.reference_no', 'i.auth_code',
             'i.transaction_id', 'i.card_last4', 'i.note', 'i.terminal_id'];
         $parts = array_map(fn($c) => "$c LIKE ?", $cols);
+        $parts[] = 'EXISTS (SELECT 1 FROM invoice_numbers sn WHERE sn.invoice_id = i.id AND sn.doc_no LIKE ?)';
         $parts[] = 'EXISTS (SELECT 1 FROM invoice_items sii JOIN catalog_items sci ON sci.id = sii.item_id
                      WHERE sii.invoice_id = i.id AND (sci.name LIKE ? OR sii.line_note LIKE ?))';
         $where[] = '(' . implode(' OR ', $parts) . ')';
-        $params = array_merge($params, array_fill(0, count($cols) + 2, $like));
+        $params = array_merge($params, array_fill(0, count($cols) + 3, $like));
         // Amount search: "1500" also finds invoices of exactly 1500.
         if (is_numeric(str_replace(',', '', $q))) {
             $where[count($where) - 1] = '(' . implode(' OR ', $parts) . ' OR i.amount = ?)';
@@ -97,6 +99,7 @@ function invoices_list(): void
 {
     $u = require_user();
     session_write_close();
+    assign_invoice_numbers();
     [$where, $params] = invoice_filters($u, $_GET);
     $perPage = min(max((int)($_GET['per_page'] ?? 30), 1), 5000); // large pages are used by Excel export
     $page = max((int)($_GET['page'] ?? 1), 1);
@@ -143,6 +146,7 @@ function invoices_create(): void
     if (array_key_exists('items', $b)) {
         save_lines($id, $d['store_id'], $b['items'], $d['amount'], $u);
     }
+    assign_invoice_numbers();
     log_activity($u, 'create', 'invoice', $id, 'إضافة فاتورة ' . ($d['customer_name'] ?? '') . ' بمبلغ ' . $d['amount']);
     db()->commit();
     json_out(['invoice' => load_invoice($id, $u)]);
@@ -328,6 +332,7 @@ function save_lines(int $invoiceId, int $storeId, $lines, float $amount, array $
 
 function load_invoice(int $id, array $u): array
 {
+    assign_invoice_numbers();
     $row = one('SELECT ' . INVOICE_COLUMNS . ' ' . INVOICE_FROM . ' WHERE i.id = ?', [$id]);
     if (!$row) {
         fail(404, 'الفاتورة غير موجودة');

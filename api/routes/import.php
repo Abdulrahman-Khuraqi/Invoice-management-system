@@ -220,6 +220,7 @@ function import_rows(): void
         }
     }
     if ($inserted > 0) {
+        assign_invoice_numbers();
         $file = str_in($b['file_name'] ?? null, 120);
         log_activity($u, 'import', 'invoice', null, "استيراد $inserted فاتورة" . ($file ? " من $file" : '') . ' بمجموع ' . round($sum, 2));
     }

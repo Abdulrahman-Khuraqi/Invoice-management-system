@@ -31,6 +31,7 @@ function stores_list(): void
         $s['logo_bg'] = $s['logo_v'] === null ? null : $s['logo_bg'];
         $s['terminals'] = $byStore[$s['id']] ?? [];
         $s['info'] = store_info_out($infoRows[$s['id']] ?? []);
+        $s['code'] = store_code($s['id']);
     }
     json_out(['stores' => $stores]);
 }
@@ -66,6 +67,9 @@ function stores_update(string $id): void
     q('UPDATE stores SET name = ?, color = ?, sort = ?, is_active = ? WHERE id = ?', [$name, $color, $sort, (int)$active, (int)$id]);
     if ($info !== null) {
         store_info_save((int)$id, $info);
+    }
+    if (array_key_exists('code', $b) && strtoupper(trim((string)$b['code'])) !== store_code((int)$id)) {
+        store_code_set((int)$id, $b['code']);
     }
     if ($active !== (bool)$store['is_active']) {
         log_activity($u, $active ? 'restore' : 'archive', 'store', (int)$id, ($active ? 'استعادة متجر: ' : 'أرشفة متجر: ') . $name);

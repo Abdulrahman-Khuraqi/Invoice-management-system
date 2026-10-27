@@ -78,13 +78,6 @@ export function paperDate(s: string | null | undefined, sep = '/') {
 /** 1500 → "1500.00" (no thousands separator, like the original invoices). */
 export const paperMoney = (n: number) => n.toFixed(2)
 
-/** "INV-261012-00007": YYMMDD of the payment + the record id. Used when the invoice has no number of its own. */
-function generatedNumber(invoice: Invoice) {
-  const d = parseDate(invoice.paid_at ?? invoice.created_at_src ?? invoice.created_at)
-  const day = d ? `${String(d.getFullYear()).slice(2)}${pad(d.getMonth() + 1)}${pad(d.getDate())}` : '000000'
-  return `INV-${day}-${String(invoice.id).padStart(5, '0')}`
-}
-
 /**
  * The invoice's amount is what was actually paid, so it is always the Total. Lines that add up to
  * more than that show the difference as a Discount.
@@ -105,7 +98,7 @@ export function buildPaperData(invoice: Invoice, template: PaperTemplate): Paper
   // Per-unit rounding of a single line can drift by a cent or two; that isn't a discount.
   const subTotal = linesSum - total < 0.02 ? total : linesSum
   return {
-    number: invoice.invoice_no || generatedNumber(invoice),
+    number: invoice.doc_no || invoice.invoice_no || `#${invoice.id}`,
     date: paperDate(invoice.paid_at ?? invoice.created_at_src ?? invoice.created_at),
     fileDate: paperDate(invoice.paid_at ?? invoice.created_at_src ?? invoice.created_at, '-'),
     customer: invoice.customer_name || '—',
@@ -118,7 +111,7 @@ export function buildPaperData(invoice: Invoice, template: PaperTemplate): Paper
 }
 
 /**
- * "Purchase_Invoice_ARVO-INV-261012-00007_12-10-2026_1350": title, company, number, date, total.
+ * "Purchase_Invoice_ARVO-ARV-261012-0007_12-10-2026_1350": title, company, number, date, total.
  * ASCII only: browsers drop download names that contain Arabic, so an Arabic store name is left out.
  */
 export function paperFileName(template: PaperTemplate, data: PaperData) {

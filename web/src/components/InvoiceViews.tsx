@@ -12,6 +12,9 @@ import { Sheet } from './Sheet'
 import { Badge, Button, Money, Segmented, StoreDot, cx } from './ui'
 import { t } from '../lib/i18n'
 
+/** The invoice's own number (ARV-261009-0001), or the number it came with from the payment file. */
+export const numberLabel = (i: Invoice) => i.doc_no ?? (i.invoice_no ? `#${i.invoice_no}` : null)
+
 export function ItemChips({ invoice, max = 2 }: { invoice: Invoice; max?: number }) {
   if (!invoice.lines.length) {
     return (
@@ -98,10 +101,10 @@ export function InvoiceCard({
           )}
           {showStore && <span>·</span>}
           <span className="shrink-0">{fmtDate(invoice.paid_at)}</span>
-          {invoice.invoice_no && (
+          {numberLabel(invoice) && (
             <>
               <span>·</span>
-              <span className="num shrink-0">#{invoice.invoice_no}</span>
+              <span className="num shrink-0">{numberLabel(invoice)}</span>
             </>
           )}
         </span>
@@ -174,7 +177,7 @@ export function InvoiceTable({
                 )}
                 <td className="max-w-[240px] px-4 py-3">
                   <span className="block truncate font-semibold leading-snug">{inv.customer_name || t('بدون اسم')}</span>
-                  {inv.invoice_no && <span className="num block text-[12px] leading-snug text-muted">#{inv.invoice_no}</span>}
+                  {numberLabel(inv) && <span className="num block text-[12px] leading-snug text-muted">{numberLabel(inv)}</span>}
                 </td>
                 {showStore && (
                   <td className="px-4 py-3">
@@ -410,7 +413,10 @@ export function InvoiceSheet({
             <Row label={t('الإيميل')} copy={invoice.email}>
               {invoice.email && <span className="num">{invoice.email}</span>}
             </Row>
-            <Row label={t('رقم الفاتورة')}>{invoice.invoice_no && <span className="num">{invoice.invoice_no}</span>}</Row>
+            <Row label={t('رقم الفاتورة')} copy={invoice.doc_no}>
+              {invoice.doc_no && <span className="num">{invoice.doc_no}</span>}
+            </Row>
+            <Row label={t('رقم الفاتورة الأصلي')}>{invoice.invoice_no && <span className="num">{invoice.invoice_no}</span>}</Row>
             <Row label={t('طريقة الدفع')}>{invoice.pay_method && payLabel(invoice.pay_method)}</Row>
             <Row label={t('البطاقة')}>
               {(invoice.card_type || invoice.card_last4) && (

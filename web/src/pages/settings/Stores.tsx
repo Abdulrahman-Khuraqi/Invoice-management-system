@@ -77,6 +77,7 @@ function EditStoreSheet({ store, onClose }: { store: Store; onClose: () => void 
   const { toast, confirm } = useFeedback()
   const [name, setName] = useState(store.name)
   const [color, setColor] = useState(store.color)
+  const [code, setCode] = useState(store.code)
   const [info, setInfo] = useState(store.info ?? EMPTY_INFO)
   const [terminal, setTerminal] = useState('')
   const [moveTo, setMoveTo] = useState('')
@@ -97,7 +98,7 @@ function EditStoreSheet({ store, onClose }: { store: Store; onClose: () => void 
 
   const save = async () => {
     setSaving(true)
-    if (await call(() => api(`stores/${store.id}`, { method: 'PUT', body: { name, color, info } }), t('تم الحفظ'))) onClose()
+    if (await call(() => api(`stores/${store.id}`, { method: 'PUT', body: { name, color, code, info } }), t('تم الحفظ'))) onClose()
     setSaving(false)
   }
 
@@ -157,6 +158,16 @@ function EditStoreSheet({ store, onClose }: { store: Store; onClose: () => void 
         </Field>
         <Field label={t('اللون')}>
           <ColorPicker value={color} onChange={setColor} />
+        </Field>
+        <Field label={t('رمز المتجر')} hint={t('يبدأ به رقم كل فاتورة جديدة، مثل {0}-261009-0001. الفواتير السابقة لا يتغير رقمها.', code || 'ARV')}>
+          <Input
+            value={code}
+            onChange={(e) => setCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 4))}
+            maxLength={4}
+            dir="ltr"
+            autoCapitalize="characters"
+            className="num text-start uppercase"
+          />
         </Field>
 
         <div>

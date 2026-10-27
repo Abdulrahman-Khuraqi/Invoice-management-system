@@ -614,7 +614,7 @@ function UpdateRow({ update }: { update: RowUpdate }) {
   return (
     <div className="rounded-2xl bg-surface-2 px-3 py-2.5 text-[14px]">
       <p className="font-semibold">
-        {invoice.customer_name || t('بدون اسم')} <span className="num font-normal text-muted">· {invoice.invoice_no ? `#${invoice.invoice_no}` : t('معرّف {0}', invoice.id)}</span>
+        {invoice.customer_name || t('بدون اسم')} <span className="num font-normal text-muted">· {invoice.doc_no ?? (invoice.invoice_no ? `#${invoice.invoice_no}` : t('معرّف {0}', invoice.id))}</span>
       </p>
       <ul className="mt-1 space-y-0.5">
         {changes.map((c) => (
