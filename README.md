@@ -65,7 +65,7 @@ web/src/
   lib/invoiceExport.ts invoice paper → PNG / PDF (html2canvas-pro + jsPDF, lazy-loaded)
 ```
 
-**Invoice paper**: opening an invoice shows it as a printable paper (tab «الفاتورة») with PNG/PDF export. Each store's look is a template in `web/src/lib/invoicePaper.ts`; stores without one use a plain default. ARVO's logo and seal go in `web/public/invoice/arvo/logo.png` and `seal.png` (a missing file just leaves that spot empty).
+**Invoice paper**: opening an invoice shows it as a printable paper (tab «الفاتورة») with PNG/PDF export. Each store's look is a template in `web/src/lib/invoicePaper.ts`; stores without one use a plain default. ARVO's logo and seal are `web/public/invoice/arvo/logo.png` and `seal.png` (a missing file just leaves that spot empty). Exported files are named like the original invoices: `Purchase_Invoice_ARVO-<number>_<dd-mm-yyyy>_<total>`.
 
 **Schema changes**: add `api/migrations/002_*.sql` (plain MySQL, `IF NOT EXISTS` / idempotent statements). It runs on the next request after deploy.
 

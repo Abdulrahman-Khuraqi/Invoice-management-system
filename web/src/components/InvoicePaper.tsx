@@ -32,7 +32,7 @@ export function InvoicePaper({ invoice, template }: { invoice: Invoice; template
   const d = useMemo(() => buildPaperData(invoice, template), [invoice, template])
   const cur = template.currency
   return (
-    <div className="ip" style={{ '--ip-accent': template.accent } as CSSProperties}>
+    <div className="ip" style={{ '--ip-primary': template.color } as CSSProperties}>
       <header>
         <div className="ip-brand">{template.company}</div>
         <div className="ip-head-row">
@@ -45,12 +45,12 @@ export function InvoicePaper({ invoice, template }: { invoice: Invoice; template
       <section className="ip-parties">
         <div className="ip-block">
           <div className="ip-meta">
-            <div>
-              <span className="ip-meta-label">Invoice Number: </span>
+            <div className="ip-meta-item">
+              <span className="ip-meta-label">Invoice Number:</span>
               <span className="ip-meta-value ip-num">{d.number}</span>
             </div>
-            <div>
-              <span className="ip-meta-label">Invoice Date: </span>
+            <div className="ip-meta-item">
+              <span className="ip-meta-label">Invoice Date:</span>
               <span className="ip-meta-value ip-num">{d.date}</span>
             </div>
           </div>
@@ -68,16 +68,16 @@ export function InvoicePaper({ invoice, template }: { invoice: Invoice; template
         <thead>
           <tr>
             <th className="ip-col-desc">Item &amp; Description</th>
-            <th>Unit Price</th>
+            <th className="ip-col-price">Unit Price</th>
             <th className="ip-col-qty">Qty</th>
-            <th>Amount</th>
+            <th className="ip-col-amount">Amount</th>
           </tr>
         </thead>
         <tbody>
           {d.rows.map((r, i) => (
             <tr key={i}>
               <td className="ip-col-desc">
-                <div className="ip-item-name" dir="auto">
+                <div dir="auto">
                   {r.description}
                 </div>
                 {r.note && (
@@ -86,11 +86,11 @@ export function InvoicePaper({ invoice, template }: { invoice: Invoice; template
                   </div>
                 )}
               </td>
-              <td className="ip-num">
+              <td className="ip-col-price ip-num">
                 {paperMoney(r.unitPrice)} {cur}
               </td>
               <td className="ip-col-qty ip-num">{r.qty}</td>
-              <td className="ip-num">
+              <td className="ip-col-amount ip-num">
                 {paperMoney(r.amount)} {cur}
               </td>
             </tr>

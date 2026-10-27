@@ -19,7 +19,8 @@ export interface PaperTemplate {
   /** Files under web/public/, e.g. "invoice/arvo/logo.png". Hidden if missing. */
   logo?: string
   seal?: string
-  accent: string
+  /** Color of the company name at the top. */
+  color: string
   /** Row shown when the invoice has no service/product lines. */
   fallbackItem: string
 }
@@ -32,7 +33,7 @@ const ARVO: PaperTemplate = {
   currency: 'SAR',
   logo: 'invoice/arvo/logo.png',
   seal: 'invoice/arvo/seal.png',
-  accent: '#111827',
+  color: '#0f2942',
   fallbackItem: 'Purchase',
 }
 
@@ -41,7 +42,7 @@ const TEMPLATES: { match: RegExp; template: PaperTemplate }[] = [{ match: /arvo|
 export function templateFor(storeName: string): PaperTemplate {
   const hit = TEMPLATES.find((t) => t.match.test(storeName))
   if (hit) return hit.template
-  return { id: 'default', company: storeName, title: 'PURCHASE INVOICE', currency: 'SAR', accent: '#111827', fallbackItem: 'Purchase' }
+  return { id: 'default', company: storeName, title: 'PURCHASE INVOICE', currency: 'SAR', color: '#0f2942', fallbackItem: 'Purchase' }
 }
 
 export interface PaperRow {
@@ -55,6 +56,8 @@ export interface PaperRow {
 export interface PaperData {
   number: string
   date: string
+  /** Same date with dashes, safe for file names. */
+  fileDate: string
   customer: string
   email: string
   rows: PaperRow[]
@@ -66,14 +69,21 @@ export interface PaperData {
 const pad = (n: number) => String(n).padStart(2, '0')
 const cents = (n: number) => Math.round(n * 100) / 100
 
-/** "2026-10-12 20:59:11" → "12/10/2026 – 20:59" */
-export function paperDate(s: string | null | undefined) {
+/** "2026-10-12 20:59:11" → "12/10/2026" */
+export function paperDate(s: string | null | undefined, sep = '/') {
   const d = parseDate(s)
-  return d ? `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()} – ${pad(d.getHours())}:${pad(d.getMinutes())}` : '—'
+  return d ? [pad(d.getDate()), pad(d.getMonth() + 1), d.getFullYear()].join(sep) : '—'
 }
 
-const moneyFmt = new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-export const paperMoney = (n: number) => moneyFmt.format(n)
+/** 1500 → "1500.00" (no thousands separator, like the original invoices). */
+export const paperMoney = (n: number) => n.toFixed(2)
+
+/** "INV-261012-00007": YYMMDD of the payment + the record id. Used when the invoice has no number of its own. */
+function generatedNumber(invoice: Invoice) {
+  const d = parseDate(invoice.paid_at ?? invoice.created_at_src ?? invoice.created_at)
+  const day = d ? `${String(d.getFullYear()).slice(2)}${pad(d.getMonth() + 1)}${pad(d.getDate())}` : '000000'
+  return `INV-${day}-${String(invoice.id).padStart(5, '0')}`
+}
 
 /**
  * The invoice's amount is what was actually paid, so it is always the Total. Lines that add up to
@@ -95,8 +105,9 @@ export function buildPaperData(invoice: Invoice, template: PaperTemplate): Paper
   // Per-unit rounding of a single line can drift by a cent or two; that isn't a discount.
   const subTotal = linesSum - total < 0.02 ? total : linesSum
   return {
-    number: invoice.invoice_no || invoice.transaction_id || `#${invoice.id}`,
+    number: invoice.invoice_no || generatedNumber(invoice),
     date: paperDate(invoice.paid_at ?? invoice.created_at_src ?? invoice.created_at),
+    fileDate: paperDate(invoice.paid_at ?? invoice.created_at_src ?? invoice.created_at, '-'),
     customer: invoice.customer_name || '—',
     email: invoice.email || '—',
     rows,
@@ -106,8 +117,17 @@ export function buildPaperData(invoice: Invoice, template: PaperTemplate): Paper
   }
 }
 
-/** File-system friendly name for downloads: "ARVO-AG-2026-10-001". */
+/**
+ * "Purchase_Invoice_ARVO-INV-261012-00007_12-10-2026_1350": title, company, number, date, total.
+ * ASCII only: browsers drop download names that contain Arabic, so an Arabic store name is left out.
+ */
 export function paperFileName(template: PaperTemplate, data: PaperData) {
-  const slug = `${template.company}-${data.number}`.replace(/[^\p{L}\p{N}._-]+/gu, '-').replace(/^-+|-+$/g, '')
-  return slug || 'invoice'
+  const ascii = (s: string) => s.replace(/[^A-Za-z0-9._-]+/g, '-').replace(/^-+|-+$/g, '')
+  const title = template.title
+    .toLowerCase()
+    .split(' ')
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join('_')
+  const head = [ascii(title), ascii(template.company)].filter(Boolean).join('_')
+  return [head ? `${head}-${ascii(data.number)}` : ascii(data.number), data.fileDate, Math.round(data.total)].join('_')
 }

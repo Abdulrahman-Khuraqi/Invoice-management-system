@@ -1,24 +1,20 @@
 /*
- * The printable invoice paper. Plain CSS with hex colors on purpose: it is rasterized for
- * PNG/PDF export and must look the same in light and dark mode, so it ignores the app theme.
+ * The printable invoice paper, modelled on the print layout of the ARVO purchase invoice
+ * (A4, 10mm margins). Plain CSS with hex colors on purpose: it is rasterized for PNG/PDF
+ * export and must look the same in light and dark mode, so it ignores the app theme.
  * Fixed A4 width (794px @ 96dpi); the preview scales it down with a CSS transform.
  */
 .ip {
-  --ip-accent: #111827;
-  --ip-ink: #111827;
-  --ip-muted: #6b7280;
-  --ip-line: #e5e7eb;
+  --ip-primary: #0f2942;
   box-sizing: border-box;
   width: 794px;
   min-height: 1123px;
-  display: flex;
-  flex-direction: column;
-  padding: 56px 56px 48px;
+  padding: 38px;
   background: #fff;
-  color: var(--ip-ink);
-  font-family: 'IBM Plex Sans Arabic', Arial, Helvetica, sans-serif;
-  font-size: 14px;
-  line-height: 1.5;
+  color: #000;
+  font-family: Arial, Helvetica, 'IBM Plex Sans Arabic', sans-serif;
+  font-size: 13px;
+  line-height: normal;
   direction: ltr;
   text-align: left;
 }
@@ -26,172 +22,197 @@
 .ip *::before,
 .ip *::after {
   box-sizing: border-box;
-}
-.ip h1,
-.ip h3,
-.ip p {
   margin: 0;
+  padding: 0;
 }
 
+/* Header */
 .ip-brand {
-  font-size: 13px;
+  margin-bottom: 12px;
+  text-align: center;
+  font-size: 14px;
   font-weight: 700;
-  letter-spacing: 0.32em;
-  text-transform: uppercase;
-  color: var(--ip-muted);
+  color: var(--ip-primary);
 }
 .ip-head-row {
   display: flex;
-  align-items: center;
   justify-content: space-between;
-  gap: 24px;
-  margin-top: 14px;
+  align-items: center;
 }
 .ip-title {
-  font-size: 30px;
+  font-size: 16px;
   font-weight: 700;
-  letter-spacing: 0.04em;
-  color: var(--ip-accent);
+  color: #000;
 }
 .ip-logo {
   display: block;
-  max-width: 180px;
-  max-height: 72px;
+  max-height: 52px;
+  width: auto;
   object-fit: contain;
 }
 .ip-rule {
-  height: 3px;
-  margin-top: 18px;
-  background: var(--ip-accent);
+  height: 2px;
+  margin: 10px 0 14px;
+  background: #000;
 }
 
+/* Invoice number / date, company, bill to */
 .ip-parties {
-  display: flex;
-  justify-content: space-between;
-  gap: 40px;
-  margin-top: 36px;
-}
-.ip-block {
-  flex: 1 1 0;
-  min-width: 0;
-}
-.ip-block h3 {
-  font-size: 15px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  margin-bottom: 20px;
 }
 .ip-meta {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  margin-bottom: 18px;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 16px;
 }
-.ip-meta-label,
-.ip-field-label {
-  color: var(--ip-muted);
+.ip-meta-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+}
+.ip-meta-label {
+  min-width: 110px;
+  font-size: 11px;
   font-weight: 600;
+  white-space: nowrap;
 }
 .ip-meta-value {
-  font-weight: 600;
+  padding: 2px 4px;
+  font-size: 11px;
+  font-weight: 500;
+}
+.ip-block h3 {
+  margin-bottom: 6px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 .ip-company-info {
-  margin-top: 4px;
-  color: var(--ip-muted);
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.5;
 }
 .ip-field {
-  margin-top: 10px;
+  margin-bottom: 5px;
+}
+.ip-field:last-child {
+  margin-bottom: 0;
 }
 .ip-field-label {
   display: block;
-  font-size: 12px;
+  margin-bottom: 2px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
 }
 .ip-field-value {
   display: block;
-  font-size: 15px;
-  font-weight: 600;
+  padding: 2px 4px;
+  font-size: 11px;
+  font-weight: 500;
   overflow-wrap: anywhere;
 }
 
+/* Items */
 .ip-table {
   width: 100%;
-  margin-top: 40px;
+  margin-bottom: 10px;
   border-collapse: collapse;
+  border: 1px solid #000;
+  font-size: 10px;
 }
-.ip-table th {
-  padding: 10px 12px;
-  background: #f3f4f6;
-  border-bottom: 2px solid var(--ip-accent);
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  text-align: right;
-}
+.ip-table th,
 .ip-table td {
-  padding: 14px 12px;
-  border-bottom: 1px solid var(--ip-line);
-  text-align: right;
-  vertical-align: top;
-  white-space: nowrap;
+  padding: 5px 8px;
+  border: 1px solid #666;
+  text-align: left;
+  font-weight: 500;
+}
+.ip-table thead th {
+  background: #333;
+  color: #fff;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+.ip-table tbody tr:nth-child(even) {
+  background: #f5f5f5;
 }
 .ip-table .ip-col-desc {
-  width: 46%;
-  text-align: left;
-  white-space: normal;
+  min-width: 180px;
 }
-.ip-table .ip-col-qty {
+.ip-table thead .ip-col-price,
+.ip-table thead .ip-col-amount {
+  text-align: right;
+}
+.ip-table thead .ip-col-qty {
   text-align: center;
 }
-.ip-item-name {
-  font-weight: 600;
-  overflow-wrap: anywhere;
+.ip-table .ip-col-price,
+.ip-table .ip-col-amount {
+  width: 100px;
+  white-space: nowrap;
+}
+.ip-table .ip-col-qty {
+  width: 70px;
 }
 .ip-item-note {
   margin-top: 2px;
-  font-size: 12px;
-  color: var(--ip-muted);
+  font-size: 9px;
+  color: #444;
 }
 
+/* Totals */
 .ip-totals {
-  width: 320px;
-  margin: 24px 0 0 auto;
+  width: 100%;
+  max-width: 300px;
+  margin: 0 0 12px auto;
   border-collapse: collapse;
+  border: 1px solid #000;
 }
 .ip-totals td {
-  padding: 8px 12px;
-  text-align: right;
+  padding: 5.5px 8px;
+  border: 1px solid #000;
+  font-size: 10px;
+  white-space: nowrap;
 }
 .ip-totals td:first-child {
-  text-align: left;
-  color: var(--ip-muted);
+  width: 38%;
   font-weight: 600;
 }
+.ip-totals td:last-child {
+  text-align: right;
+}
 .ip-totals .ip-total-row td {
-  padding-top: 12px;
-  border-top: 2px solid var(--ip-accent);
-  color: var(--ip-ink);
-  font-size: 18px;
+  background: #eee;
+  font-size: 11px;
   font-weight: 700;
 }
 
+/* Seal */
 .ip-footer {
   display: flex;
-  justify-content: flex-end;
-  margin-top: auto;
-  padding-top: 40px;
+  align-items: center;
+  justify-content: center;
+  padding-top: 16px;
+  margin-top: 16px;
 }
 .ip-seal {
   display: block;
-  max-width: 170px;
-  max-height: 170px;
-  object-fit: contain;
+  width: 250px;
+  height: auto;
 }
 
 /* Keeps digits and currency together and left-to-right, even next to Arabic names. */
 .ip-num {
   unicode-bidi: isolate;
-  font-variant-numeric: tabular-nums;
 }
