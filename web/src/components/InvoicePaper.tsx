@@ -55,7 +55,11 @@ export function InvoicePaper({ invoice, template }: { invoice: Invoice; template
             </div>
           </div>
           <h3 dir="auto">{template.company}</h3>
-          {template.email && <div className="ip-company-info">{template.email}</div>}
+          {[template.email, ...(template.lines ?? [])].filter(Boolean).map((line) => (
+            <div key={line} className="ip-company-info">
+              {line}
+            </div>
+          ))}
         </div>
         <div className="ip-block">
           <h3>Bill To</h3>

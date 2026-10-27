@@ -13,6 +13,8 @@ export interface PaperTemplate {
   /** Printed above the title and as the heading of the company block. */
   company: string
   email?: string
+  /** More lines under the email in the company block (phone, licence number ...). */
+  lines?: string[]
   /** Document title, e.g. "PURCHASE INVOICE". */
   title: string
   currency: string
@@ -55,9 +57,28 @@ const XRUN: PaperTemplate = {
   fallbackItem: 'Purchase',
 }
 
+const ANAS_FL = 'FL-216314344' // also printed on the stamp: web/public/invoice/anas/seal.svg
+
+const ANAS: PaperTemplate = {
+  id: 'anas',
+  company: 'ANAS',
+  email: 'anas707.707aa@gmail.com',
+  lines: ['Phone: 0551728288', `Freelance Document: ${ANAS_FL}`],
+  title: 'PURCHASE INVOICE',
+  currency: 'SAR',
+  logo: 'invoice/anas/logo.png',
+  seal: 'invoice/anas/seal.png',
+  color: '#021a4d',
+  logoHeight: 40,
+  sealWidth: 210,
+  fallbackItem: 'Purchase',
+}
+
 const TEMPLATES: { match: RegExp; template: PaperTemplate }[] = [
   { match: /arvo|أرفو|ارفو/i, template: ARVO },
   { match: /x\s*run|اكس\s*ران|إكس\s*ران/i, template: XRUN },
+  // The anas store; it may also be named after its field (game design and development).
+  { match: /\banas\b|أنس|تصميم\s*و\s*تطوير\s*ال[اأ]لعاب/i, template: ANAS },
 ]
 
 export function templateFor(storeName: string): PaperTemplate {
