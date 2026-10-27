@@ -16,6 +16,17 @@ export interface Terminal {
   label: string | null
 }
 
+export interface StoreInfo {
+  website: string | null
+  phone: string | null
+  whatsapp: string | null
+  email: string | null
+  address: string | null
+  cr_number: string | null
+  vat_number: string | null
+  notes: string | null
+}
+
 export interface Store {
   id: number
   name: string
@@ -23,6 +34,10 @@ export interface Store {
   is_active: boolean
   sort: number
   invoice_count: number
+  /** Version stamp of the uploaded logo (used in its URL); null = no logo. */
+  logo_v: number | null
+  logo_bg: 'light' | 'dark' | null
+  info: StoreInfo
   terminals: Terminal[]
 }
 
@@ -44,6 +59,8 @@ export interface CatalogItem {
   category_id: number | null
   store_id: number | null
   default_price: number | null
+  price_min: number | null
+  price_max: number | null
   sku: string | null
   is_active: boolean
   category_name: string | null

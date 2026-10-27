@@ -31,6 +31,9 @@ const ROUTES = [
     ['POST', 'stores', 'stores_create'],
     ['PUT', 'stores/(\d+)', 'stores_update'],
     ['DELETE', 'stores/(\d+)', 'stores_delete'],
+    ['GET', 'stores/(\d+)/logo', 'stores_logo_get'],
+    ['POST', 'stores/(\d+)/logo', 'stores_logo_save'],
+    ['DELETE', 'stores/(\d+)/logo', 'stores_logo_delete'],
     ['POST', 'stores/(\d+)/move-invoices', 'stores_move_invoices'],
     ['POST', 'terminals', 'terminals_save'],
     ['DELETE', 'terminals/([\w\-]+)', 'terminals_delete'],
@@ -52,6 +55,7 @@ const ROUTES = [
     ['DELETE', 'invoices/(\d+)', 'invoices_delete'],
     ['POST', 'import/check', 'import_check'],
     ['POST', 'import', 'import_rows'],
+    ['POST', 'import/update', 'import_update'],
 
     ['GET', 'stats', 'stats_get'],
 

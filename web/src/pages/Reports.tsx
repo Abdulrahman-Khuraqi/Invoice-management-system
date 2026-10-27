@@ -7,10 +7,11 @@ import { useFeedback } from '../components/Feedback'
 import { Page, TopBar } from '../components/Layout'
 import { Sheet } from '../components/Sheet'
 import { Card, Chip, EmptyState, IconButton, Money, PageLoader, SectionTitle, cx } from '../components/ui'
-import { KIND_LABELS, RANGE_LABELS, compact, fmtDayMonth, rangeDates, ymd, type RangeKey } from '../lib/format'
+import { KIND_LABELS, RANGE_LABELS, compact, fmtDayMonth, money, rangeDates, ymd, type RangeKey } from '../lib/format'
 import { load, save } from '../lib/storage'
 import type { Stats, StatRow } from '../types'
 import { RangePicker } from './Invoices'
+import { ARROW, t } from '../lib/i18n'
 
 export default function Reports() {
   const { currentStore, storeById } = useApp()
@@ -29,38 +30,38 @@ export default function Reports() {
       .catch((e) => toast(errorMessage(e), 'error'))
   }, [currentStore, range, custom.from, custom.to, toast])
 
-  const label = range ? RANGE_LABELS[range] : `${custom.from ?? '…'} ← ${custom.to ?? '…'}`
+  const label = range ? RANGE_LABELS[range] : `${custom.from ?? '…'} ${ARROW} ${custom.to ?? '…'}`
   const linkQuery = range && range !== 'all' ? `range=${range}` : new URLSearchParams(Object.entries(custom).filter(([, v]) => v) as [string, string][]).toString()
 
   const doExport = async () => {
     if (!stats) return
     const { exportReport } = await import('../lib/excel')
-    const storeName = storeById(currentStore)?.name ?? 'كل المتاجر'
+    const storeName = storeById(currentStore)?.name ?? t('كل المتاجر')
     exportReport(
       [
-        { name: 'ملخص', rows: [{ 'المتجر': storeName, 'الفترة': label, 'عدد الفواتير': stats.count, 'المجموع': stats.sum, 'غير مصنّفة': stats.unclassified, 'مبلغ غير المصنّفة': stats.unclassified_sum }] },
-        { name: 'حسب المتجر', rows: stats.by_store.map((r) => ({ 'المتجر': r.name, 'عدد الفواتير': r.n, 'المجموع': r.total })) },
-        { name: 'حسب الخدمة والمنتج', rows: stats.by_item.map((r) => ({ 'الخدمة/المنتج': r.name, 'النوع': r.kind ? KIND_LABELS[r.kind] : '', 'عدد الفواتير': r.n, 'المجموع': r.total })) },
-        { name: 'حسب التصنيف', rows: stats.by_category.map((r) => ({ 'التصنيف': r.name, 'عدد الفواتير': r.n, 'المجموع': r.total })) },
-        { name: 'يومي', rows: stats.daily.map((r) => ({ 'اليوم': r.day, 'عدد الفواتير': r.n, 'المجموع': r.total })) },
+        { name: t('ملخص'), rows: [{ [t('المتجر')]: storeName, [t('الفترة')]: label, [t('عدد الفواتير')]: stats.count, [t('المجموع')]: stats.sum, [t('غير مصنّفة')]: stats.unclassified, [t('مبلغ غير المصنّفة')]: stats.unclassified_sum }] },
+        { name: t('حسب المتجر'), rows: stats.by_store.map((r) => ({ [t('المتجر')]: r.name, [t('عدد الفواتير')]: r.n, [t('المجموع')]: r.total })) },
+        { name: t('حسب الخدمة والمنتج'), rows: stats.by_item.map((r) => ({ [t('الخدمة/المنتج')]: r.name, [t('النوع')]: r.kind ? KIND_LABELS[r.kind] : '', [t('عدد الفواتير')]: r.n, [t('المجموع')]: r.total })) },
+        { name: t('حسب التصنيف'), rows: stats.by_category.map((r) => ({ [t('التصنيف')]: r.name, [t('عدد الفواتير')]: r.n, [t('المجموع')]: r.total })) },
+        { name: t('يومي'), rows: stats.daily.map((r) => ({ [t('اليوم')]: r.day, [t('عدد الفواتير')]: r.n, [t('المجموع')]: r.total })) },
       ],
-      `تقرير-${storeName}-${ymd(new Date())}.xlsx`,
+      t('تقرير-{0}-{1}.xlsx', storeName, ymd(new Date())),
     )
   }
 
   return (
     <>
       <TopBar
-        title="التقارير"
+        title={t('التقارير')}
         switcher
         actions={
-          <IconButton label="تصدير التقرير" onClick={doExport} disabled={!stats}>
+          <IconButton label={t('تصدير التقرير')} onClick={doExport} disabled={!stats}>
             <Download className="size-6" />
           </IconButton>
         }
       />
       <Page>
-        <div className="no-scrollbar -mx-4 mb-4 flex gap-2 overflow-x-auto px-4">
+        <div className="no-scrollbar -mx-4 mb-4 flex gap-2 overflow-x-auto px-4 lg:mx-0 lg:flex-wrap lg:px-0">
           {(['month', 'last_month', 'year', 'all'] as RangeKey[]).map((k) => (
             <Chip
               key={k}
@@ -74,78 +75,82 @@ export default function Reports() {
             </Chip>
           ))}
           <Chip active={!range || !['month', 'last_month', 'year', 'all'].includes(range)} onClick={() => setPicker(true)}>
-            <CalendarDays className="size-4" /> {range && ['month', 'last_month', 'year', 'all'].includes(range) ? 'فترة أخرى' : label}
+            <CalendarDays className="size-4" /> {range && ['month', 'last_month', 'year', 'all'].includes(range) ? t('فترة أخرى') : label}
           </Chip>
         </div>
 
         {!stats && <PageLoader />}
-        {stats && stats.count === 0 && <EmptyState icon={<BarChart3 className="size-8" />} title="لا توجد بيانات في هذه الفترة" />}
+        {stats && stats.count === 0 && <EmptyState icon={<BarChart3 className="size-8" />} title={t('لا توجد بيانات في هذه الفترة')} />}
         {stats && stats.count > 0 && (
           <>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-3 lg:grid-cols-4 lg:gap-4">
               <Card>
-                <p className="text-[14px] text-muted">المجموع</p>
+                <p className="text-[14px] text-muted">{t('المجموع')}</p>
                 <Money value={stats.sum} className="mt-1 block text-[22px] font-bold" />
               </Card>
               <Card>
-                <p className="text-[14px] text-muted">عدد الفواتير</p>
+                <p className="text-[14px] text-muted">{t('عدد الفواتير')}</p>
                 <p className="num mt-1 text-[22px] font-bold">{stats.count}</p>
               </Card>
               <Card>
-                <p className="text-[14px] text-muted">متوسط الفاتورة</p>
+                <p className="text-[14px] text-muted">{t('متوسط الفاتورة')}</p>
                 <Money value={stats.sum / stats.count} className="mt-1 block text-[20px] font-bold" />
               </Card>
               <Card onClick={() => navigate(`/invoices?unclassified=1${linkQuery ? '&' + linkQuery : ''}`)} className={cx(stats.unclassified > 0 && 'border-warn/40 bg-warn-soft')}>
-                <p className={cx('text-[14px]', stats.unclassified ? 'text-warn' : 'text-muted')}>غير مصنّفة</p>
+                <p className={cx('text-[14px]', stats.unclassified ? 'text-warn' : 'text-muted')}>{t('غير مصنّفة')}</p>
                 <p className={cx('num mt-1 text-[22px] font-bold', stats.unclassified > 0 && 'text-warn')}>{stats.unclassified}</p>
               </Card>
             </div>
 
             <DailyChart rows={stats.daily} />
 
+            <div className="lg:grid lg:grid-cols-2 lg:items-start lg:gap-x-8">
+
             {!currentStore && stats.by_store.length > 0 && (
-              <>
-                <SectionTitle>حسب المتجر</SectionTitle>
+              <div>
+                <SectionTitle>{t('حسب المتجر')}</SectionTitle>
                 <Bars rows={stats.by_store} total={stats.sum} />
-              </>
+              </div>
             )}
 
             {stats.by_kind.length > 0 && (
-              <>
-                <SectionTitle>خدمات مقابل منتجات</SectionTitle>
+              <div>
+                <SectionTitle>{t('خدمات مقابل منتجات')}</SectionTitle>
                 <Bars
                   rows={stats.by_kind.map((k) => ({ ...k, name: k.kind ? KIND_LABELS[k.kind] : '', color: k.kind === 'service' ? 'var(--primary)' : 'var(--success)' }))}
                   total={stats.by_kind.reduce((a, k) => a + k.total, 0)}
                 />
-              </>
+              </div>
             )}
 
             {stats.by_category.length > 0 && (
-              <>
-                <SectionTitle>حسب التصنيف</SectionTitle>
+              <div>
+                <SectionTitle>{t('حسب التصنيف')}</SectionTitle>
                 <Bars rows={stats.by_category} total={stats.by_category.reduce((a, k) => a + k.total, 0)} onClick={(r) => r.id && navigate(`/invoices?category=${r.id}${linkQuery ? '&' + linkQuery : ''}`)} />
-              </>
+              </div>
             )}
 
             {stats.by_item.length > 0 && (
-              <>
-                <SectionTitle>حسب الخدمة والمنتج</SectionTitle>
+              <div>
+                <SectionTitle>{t('حسب الخدمة والمنتج')}</SectionTitle>
                 <Bars
                   rows={stats.by_item.map((r) => ({ ...r, color: r.kind === 'service' ? 'var(--primary)' : 'var(--success)' }))}
                   total={stats.by_item.reduce((a, k) => a + k.total, 0)}
                   onClick={(r) => navigate(`/invoices?item=${r.id}${linkQuery ? '&' + linkQuery : ''}`)}
                 />
-              </>
+              </div>
             )}
+            </div>
             {stats.unclassified > 0 && (
               <p className="mt-3 px-1 text-[13px] text-muted">
-                التقارير حسب الخدمة والتصنيف لا تشمل <span className="num">{stats.unclassified}</span> فاتورة غير مصنّفة (<Money value={stats.unclassified_sum} />).
+                
+                {t('التقارير حسب الخدمة والتصنيف لا تشمل {0} فاتورة غير مصنّفة ({1}).', stats.unclassified, `${money(stats.unclassified_sum)} ${t('ر.س')}`)}
               </p>
             )}
           </>
         )}
       </Page>
-      <Sheet open={picker} onClose={() => setPicker(false)} title="الفترة">
+      <Sheet open={picker} onClose={() => setPicker(false)} title={t('الفترة')}>
         <RangePicker
           range={range}
           from={custom.from ?? ''}
@@ -185,7 +190,7 @@ function Bars({ rows, total, onClick }: { rows: StatRow[]; total: number; onClic
               <span className="block h-full rounded-full" style={{ width: `${Math.max(pct, 1.5)}%`, background: r.color ?? 'var(--primary)' }} />
             </span>
             <span className="mt-1 block text-[12px] text-muted">
-              <span className="num">{r.n}</span> فاتورة
+              <span className="num">{t('{0} فاتورة', r.n)}</span>
             </span>
           </button>
         )
@@ -202,15 +207,16 @@ function DailyChart({ rows }: { rows: StatRow[] }) {
   const best = data.reduce((a, b) => (b.total > a.total ? b : a))
   return (
     <>
-      <SectionTitle>المبيعات اليومية</SectionTitle>
+      <SectionTitle>{t('المبيعات اليومية')}</SectionTitle>
       <Card>
         <div className="mb-2 flex items-baseline justify-between text-[13px] text-muted">
           <span>
-            أعلى يوم: <span className="font-semibold text-fg">{fmtDayMonth(best.day)}</span>
+            
+            {t('أعلى يوم:')} <span className="font-semibold text-fg">{fmtDayMonth(best.day)}</span>
           </span>
-          <span className="num font-semibold text-fg">{compact(best.total)} ر.س</span>
+          <span className="num font-semibold text-fg">{compact(best.total)}  {t('ر.س')}</span>
         </div>
-        <div className="flex h-36 items-end gap-[3px]" dir="ltr">
+        <div className="flex h-36 items-end gap-[3px] lg:h-56 lg:gap-1" dir="ltr">
           {data.map((d) => (
             <div key={d.day} className="group relative flex h-full flex-1 items-end" title={`${d.day}: ${d.total}`}>
               <div className="w-full rounded-t-md bg-primary/80 transition group-hover:bg-primary" style={{ height: `${Math.max((d.total / max) * 100, 2)}%` }} />
