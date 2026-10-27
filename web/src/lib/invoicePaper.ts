@@ -21,6 +21,9 @@ export interface PaperTemplate {
   seal?: string
   /** Color of the company name at the top. */
   color: string
+  /** Max logo height / seal width in px on the paper (defaults 52 / 250); tune per image. */
+  logoHeight?: number
+  sealWidth?: number
   /** Row shown when the invoice has no service/product lines. */
   fallbackItem: string
 }
@@ -37,7 +40,25 @@ const ARVO: PaperTemplate = {
   fallbackItem: 'Purchase',
 }
 
-const TEMPLATES: { match: RegExp; template: PaperTemplate }[] = [{ match: /arvo|أرفو|ارفو/i, template: ARVO }]
+const XRUN: PaperTemplate = {
+  id: 'xrun',
+  company: 'XRUN STUDIO',
+  email: 'aans21420@gmail.com',
+  title: 'PURCHASE INVOICE',
+  currency: 'SAR',
+  // The original logo has white lettering; web/public/invoice/xrun/logo.png is a copy with dark lettering so it shows on white.
+  logo: 'invoice/xrun/logo.png',
+  seal: 'invoice/xrun/seal.png',
+  color: '#0230b7',
+  logoHeight: 38,
+  sealWidth: 210,
+  fallbackItem: 'Purchase',
+}
+
+const TEMPLATES: { match: RegExp; template: PaperTemplate }[] = [
+  { match: /arvo|أرفو|ارفو/i, template: ARVO },
+  { match: /x\s*run|اكس\s*ران|إكس\s*ران/i, template: XRUN },
+]
 
 export function templateFor(storeName: string): PaperTemplate {
   const hit = TEMPLATES.find((t) => t.match.test(storeName))

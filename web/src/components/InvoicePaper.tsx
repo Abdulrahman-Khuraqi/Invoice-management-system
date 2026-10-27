@@ -32,7 +32,7 @@ export function InvoicePaper({ invoice, template }: { invoice: Invoice; template
   const d = useMemo(() => buildPaperData(invoice, template), [invoice, template])
   const cur = template.currency
   return (
-    <div className="ip" style={{ '--ip-primary': template.color } as CSSProperties}>
+    <div className="ip" style={{ '--ip-primary': template.color, '--ip-logo-h': `${template.logoHeight ?? 52}px`, '--ip-seal-w': `${template.sealWidth ?? 250}px` } as CSSProperties}>
       <header>
         <div className="ip-brand">{template.company}</div>
         <div className="ip-head-row">

@@ -46,7 +46,7 @@
 }
 .ip-logo {
   display: block;
-  max-height: 52px;
+  max-height: var(--ip-logo-h, 52px);
   width: auto;
   object-fit: contain;
 }
@@ -208,7 +208,7 @@
 }
 .ip-seal {
   display: block;
-  width: 250px;
+  width: var(--ip-seal-w, 250px);
   height: auto;
 }
 
