@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react'
-import { Navigate, Route, Routes } from 'react-router-dom'
+import { useLayoutEffect, useRef } from 'react'
+import { Navigate, Route, Routes, useLocation, useNavigationType } from 'react-router-dom'
 import { api } from './api'
 import { AppProvider, useApp } from './context'
 import { OfflineBanner, Shell } from './components/Layout'
 import { Button, PageLoader } from './components/ui'
 import Add from './pages/Add'
+import Classify from './pages/Classify'
 import Home from './pages/Home'
 import Invoices from './pages/Invoices'
 import { Login, Setup } from './pages/Login'
@@ -74,13 +76,37 @@ export default function App() {
   )
 }
 
+const TABS = ['/', '/invoices', '/add', '/reports', '/settings']
+const depth = (p: string) => (p === '/' ? 0 : p.split('/').filter(Boolean).length)
+
+/** Tells the page transition (see index.css) which way the user is going, and starts every new page at the top. */
+function RouteEffects() {
+  const { pathname } = useLocation()
+  const type = useNavigationType()
+  const prev = useRef(pathname)
+  useLayoutEffect(() => {
+    const from = prev.current
+    prev.current = pathname
+    if (from === pathname) return
+    const a = TABS.indexOf(from)
+    const b = TABS.indexOf(pathname)
+    const nav = a >= 0 && b >= 0 ? (b > a ? 'tab-next' : 'tab-prev') : type === 'POP' || depth(pathname) < depth(from) ? 'back' : 'forward'
+    document.documentElement.dataset.nav = nav
+    if (type !== 'POP') window.scrollTo(0, 0)
+  }, [pathname, type])
+  return null
+}
+
 function AppRoutes() {
   const { can } = useApp()
   return (
+    <>
+    <RouteEffects />
     <Routes>
       <Route path="/" element={<Home />} />
       <Route path="/invoices" element={<Invoices />} />
       <Route path="/add" element={can('editor') ? <Add /> : <Navigate to="/" replace />} />
+      <Route path="/classify" element={can('editor') ? <Classify /> : <Navigate to="/" replace />} />
       <Route path="/reports" element={<Reports />} />
       <Route path="/settings" element={<Settings />} />
       <Route path="/settings/catalog" element={<CatalogSettings />} />
@@ -94,5 +120,6 @@ function AppRoutes() {
       )}
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
+    </>
   )
 }

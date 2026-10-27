@@ -27,7 +27,7 @@ export function BottomNav() {
                 <>
                   <span
                     className={cx(
-                      '-mt-5 flex size-14 items-center justify-center rounded-full bg-primary text-primary-fg shadow-lg shadow-primary/30 ring-4 ring-bg transition active:scale-95',
+                      '-mt-5 flex size-14 items-center justify-center rounded-full bg-primary text-primary-fg shadow-lg shadow-primary/30 ring-4 ring-bg transition active:scale-90',
                       isActive && 'scale-105',
                     )}
                   >
@@ -48,7 +48,7 @@ export function BottomNav() {
             >
               {({ isActive }) => (
                 <>
-                  <span className={cx('flex h-8 w-14 items-center justify-center rounded-full transition', isActive && 'bg-primary-soft')}>
+                  <span className={cx('flex h-8 w-14 items-center justify-center rounded-full transition active:scale-90', isActive && 'nav-pop bg-primary-soft')}>
                     <n.icon className="size-6" strokeWidth={isActive ? 2.4 : 2} />
                   </span>
                   <span className="text-[13px] font-semibold">{n.label}</span>
@@ -159,7 +159,7 @@ export function TopBar({ title, back, switcher, actions }: { title: string; back
             <ChevronRight className="size-7 ltr:rotate-180" />
           </IconButton>
         )}
-        <h1 className="min-w-0 flex-1 truncate text-[24px] font-bold lg:text-[26px]">{title}</h1>
+        <h1 key={title} className="title-enter min-w-0 flex-1 truncate text-[24px] font-bold lg:text-[26px]">{title}</h1>
         {actions}
         {switcher && <StoreSwitcher />}
       </div>
@@ -213,7 +213,7 @@ const PAGE_WIDTH = { wide: '', medium: 'lg:max-w-4xl', narrow: 'lg:max-w-3xl' } 
 /** Phone: single column. Desktop: wider container (`width` picks how wide). */
 export function Page({ children, className, width = 'wide' }: { children: ReactNode; className?: string; width?: keyof typeof PAGE_WIDTH }) {
   return (
-    <main className={cx('pb-nav mx-auto max-w-2xl px-4 lg:max-w-6xl lg:px-8 lg:pb-12', className)}>
+    <main className={cx('page-enter pb-nav mx-auto max-w-2xl px-4 lg:max-w-6xl lg:px-8 lg:pb-12', className)}>
       <div className={PAGE_WIDTH[width]}>{children}</div>
     </main>
   )

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { useSearchParams } from 'react-router-dom'
-import { ArrowLeftRight, CalendarDays, CheckSquare, Download, FileText, SlidersHorizontal, Tag, Trash2, X, Search } from 'lucide-react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
+import { ArrowLeftRight, CalendarDays, CheckSquare, Download, FileText, SlidersHorizontal, Tag, Trash2, X, Search, Zap } from 'lucide-react'
 import { api, errorMessage } from '../api'
 import { useApp } from '../context'
 import { useFeedback } from '../components/Feedback'
@@ -21,6 +21,7 @@ export default function Invoices() {
   const { currentStore, items, categories, can, activeStores, storeById } = useApp()
   const { toast, confirm } = useFeedback()
   const [params, setParams] = useSearchParams()
+  const navigate = useNavigate()
   const [q, setQ] = useState(params.get('q') ?? '')
   const [debouncedQ, setDebouncedQ] = useState(q)
   const [data, setData] = useState<InvoiceList | null>(null)
@@ -237,6 +238,22 @@ export default function Invoices() {
           </div>
         )}
 
+        {!loading && params.get('unclassified') === '1' && can('editor') && !!data?.total && (
+          <Button
+            block
+            size="lg"
+            className="mb-3"
+            icon={<Zap className="size-5" />}
+            onClick={() => {
+              const qs = new URLSearchParams()
+              for (const k of ['range', 'from', 'to']) if (params.get(k)) qs.set(k, params.get(k)!)
+              navigate(`/classify?${qs}`)
+            }}
+          >
+            {t('ابدأ التصنيف السريع')}
+          </Button>
+        )}
+
         {loading && <PageLoader />}
         {!loading && data && !data.invoices.length && (
           <EmptyState
@@ -265,7 +282,7 @@ export default function Invoices() {
           />
         )}
         {!loading && !desktop && (
-          <div className="space-y-2.5">
+          <div className="stagger space-y-2.5">
             {data?.invoices.map((inv) => (
               <InvoiceCard
                 key={inv.id}

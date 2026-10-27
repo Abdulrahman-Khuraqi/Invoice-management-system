@@ -70,6 +70,7 @@ html {
 
 body {
   margin: 0;
+  overflow-x: clip; /* a page sliding in must not flash a horizontal scrollbar */
   background: var(--bg);
   color: var(--fg);
   font-family: var(--font-sans);
@@ -136,6 +137,44 @@ body {
 .animate-fade { animation: fade-in 0.18s ease-out; }
 .animate-toast { animation: toast-in 0.2s ease-out; }
 
+/*
+ * Page transitions. A tiny component (RouteEffects in App.tsx) sets data-nav on <html> before each page
+ * mounts; every <Page> then slides/fades in accordingly:
+ *   forward / back  drilling into or out of a page      - bigger slide
+ *   tab-next / -prev  moving between the bottom tabs    - small slide in the tab's direction
+ * --nav-dx flips the direction in Arabic (RTL), where "forward" is leftwards.
+ * Only `backwards` fill: nothing stays applied afterwards, so fixed/sticky children behave normally.
+ */
+:root { --nav-dx: 1; }
+html[dir='rtl'] { --nav-dx: -1; }
+
+@keyframes page-in {
+  from { opacity: 0; transform: translateX(calc(var(--enter-x, 0px) * var(--nav-dx))) translateY(var(--enter-y, 0px)); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes rise-in { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+@keyframes nav-pop { 0% { transform: scale(0.7); opacity: 0.4; } 60% { transform: scale(1.08); } 100% { transform: scale(1); opacity: 1; } }
+
+.page-enter { --enter-y: 8px; animation: page-in 0.28s cubic-bezier(0.2, 0.8, 0.2, 1) backwards; }
+html[data-nav='forward'] .page-enter { --enter-x: 34px; --enter-y: 0px; }
+html[data-nav='back'] .page-enter { --enter-x: -34px; --enter-y: 0px; }
+html[data-nav='tab-next'] .page-enter { --enter-x: 18px; --enter-y: 0px; }
+html[data-nav='tab-prev'] .page-enter { --enter-x: -18px; --enter-y: 0px; }
+
+.title-enter { animation: fade-in 0.25s ease-out backwards; }
+.animate-rise { animation: rise-in 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) backwards; }
+.nav-pop { animation: nav-pop 0.28s cubic-bezier(0.2, 0.8, 0.2, 1); }
+
+/* List items rise in one after another (first 8; the rest appear with the last delay). */
+.stagger > * { animation: rise-in 0.34s cubic-bezier(0.2, 0.8, 0.2, 1) backwards; }
+.stagger > :nth-child(2) { animation-delay: 0.03s; }
+.stagger > :nth-child(3) { animation-delay: 0.06s; }
+.stagger > :nth-child(4) { animation-delay: 0.09s; }
+.stagger > :nth-child(5) { animation-delay: 0.12s; }
+.stagger > :nth-child(6) { animation-delay: 0.15s; }
+.stagger > :nth-child(7) { animation-delay: 0.18s; }
+.stagger > :nth-child(n + 8) { animation-delay: 0.21s; }
+
 @media (prefers-reduced-motion: reduce) {
-  .animate-sheet, .animate-fade, .animate-toast { animation: none; }
+  .animate-sheet, .animate-fade, .animate-toast, .page-enter, .title-enter, .animate-rise, .nav-pop, .stagger > * { animation: none; }
 }

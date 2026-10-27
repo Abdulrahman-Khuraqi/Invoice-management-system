@@ -175,7 +175,7 @@ export default function Home() {
 
               {stats.unclassified > 0 && (
                 <button
-                  onClick={() => navigate(`/invoices?unclassified=1${rangeQuery()}`)}
+                  onClick={() => navigate(can('editor') ? `/classify?${rangeQuery().slice(1)}` : `/invoices?unclassified=1${rangeQuery()}`)}
                   className="mt-3 flex w-full items-center gap-3 rounded-3xl border border-warn/30 bg-warn-soft p-4 text-start transition hover:brightness-95 active:scale-[0.99] lg:mt-0 lg:flex-col lg:items-start lg:justify-center lg:gap-4 lg:p-6"
                 >
                   <span className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-warn text-white">
@@ -185,7 +185,7 @@ export default function Home() {
                     <span className="block text-[17px] font-bold text-warn">
                       <span className="num">{t('{0} فاتورة غير مصنّفة', stats.unclassified)}</span>
                     </span>
-                    <span className="text-[14px] text-warn/80">{t('حدد الخدمة أو المنتج لكل فاتورة')}</span>
+                    <span className="text-[14px] text-warn/80">{can('editor') ? t('ابدأ التصنيف السريع') : t('حدد الخدمة أو المنتج لكل فاتورة')}</span>
                   </span>
                   <ChevronLeft className="size-6 text-warn lg:hidden ltr:rotate-180" />
                 </button>
@@ -210,7 +210,7 @@ export default function Home() {
             {!currentStore && stats.by_store.length > 0 && (
               <>
                 <SectionTitle>{t('المتاجر')}</SectionTitle>
-                <div className="grid grid-cols-2 gap-3 lg:grid-cols-[repeat(auto-fit,minmax(220px,1fr))] lg:gap-4">
+                <div className="stagger grid grid-cols-2 gap-3 lg:grid-cols-[repeat(auto-fit,minmax(220px,1fr))] lg:gap-4">
                   {stats.by_store.map((s) => (
                     <Card key={s.id} className="p-4" onClick={() => (setCurrentStore(s.id!), navigate(`/invoices?${rangeQuery().slice(1)}`))}>
                       <span className="flex items-center gap-2 text-[15px] font-semibold">
@@ -239,7 +239,7 @@ export default function Home() {
                 >
                   {t('آخر ما أُضيف')}
                 </SectionTitle>
-                <div className="space-y-2.5 lg:grid lg:grid-cols-2 lg:gap-3 lg:space-y-0">
+                <div className="stagger space-y-2.5 lg:grid lg:grid-cols-2 lg:gap-3 lg:space-y-0">
                   {recent.map((inv) => (
                     <InvoiceCard key={inv.id} invoice={inv} showStore={!currentStore} onOpen={() => setOpen(inv)} />
                   ))}
