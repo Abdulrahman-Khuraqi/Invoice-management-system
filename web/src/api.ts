@@ -14,7 +14,7 @@ type Query = Record<string, string | number | boolean | null | undefined>
 /** Calls the PHP API (api/index.php?r=<path>). Relative URL so it works from any install folder. */
 export async function api<T = unknown>(
   path: string,
-  opts: { method?: 'GET' | 'POST' | 'PUT' | 'DELETE'; body?: unknown; query?: Query } = {},
+  opts: { method?: 'GET' | 'POST' | 'PUT' | 'DELETE'; body?: unknown; query?: Query; signal?: AbortSignal } = {},
 ): Promise<T> {
   const params = new URLSearchParams({ r: path })
   for (const [k, v] of Object.entries(opts.query ?? {})) {
@@ -30,6 +30,7 @@ export async function api<T = unknown>(
         ...(opts.body !== undefined ? { 'Content-Type': 'application/json' } : {}),
       },
       body: opts.body !== undefined ? JSON.stringify(opts.body) : undefined,
+      signal: opts.signal,
     })
   } catch {
     throw new ApiError(0, t('لا يوجد اتصال بالإنترنت أو السيرفر لا يستجيب'))

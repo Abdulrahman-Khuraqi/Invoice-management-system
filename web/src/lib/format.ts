@@ -27,6 +27,9 @@ const dateFmt = new Intl.DateTimeFormat(LOCALE_GREG, { day: 'numeric', month: 's
 const timeFmt = new Intl.DateTimeFormat(LOCALE_GREG, { hour: 'numeric', minute: '2-digit' })
 const dayMonthFmt = new Intl.DateTimeFormat(LOCALE_GREG, { day: 'numeric', month: 'short' })
 
+/** Clock time of a Date, e.g. "10:42 ص". */
+export const fmtTime = (d: Date) => timeFmt.format(d)
+
 export function fmtDate(s: string | null | undefined) {
   const d = parseDate(s)
   return d ? dateFmt.format(d) : '—'
