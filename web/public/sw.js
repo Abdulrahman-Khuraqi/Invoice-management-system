@@ -1,6 +1,6 @@
 // Offline app shell. API calls are never cached: invoice data always comes fresh from the server.
-const CACHE = 'invoices-shell-v2'
-const SHELL = ['./', './index.html', './manifest.webmanifest', './icons/icon.svg', './icons/icon-192.png']
+const CACHE = 'invoices-shell-v3'
+const SHELL = ['./', './index.html', './manifest.webmanifest', './icons/app-icon-2026.svg', './icons/app-icon-2026-192.png']
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting()))

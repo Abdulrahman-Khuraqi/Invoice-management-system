@@ -214,7 +214,7 @@ const PAGE_WIDTH = { wide: '', medium: 'lg:max-w-4xl', narrow: 'lg:max-w-3xl' } 
 export function Page({ children, className, width = 'wide' }: { children: ReactNode; className?: string; width?: keyof typeof PAGE_WIDTH }) {
   return (
     <main className={cx('page-enter pb-nav mx-auto max-w-2xl px-4 lg:max-w-6xl lg:px-8 lg:pb-12', className)}>
-      <div className={PAGE_WIDTH[width]}>{children}</div>
+      <div className={cx('seq', PAGE_WIDTH[width])}>{children}</div>
     </main>
   )
 }

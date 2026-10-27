@@ -138,79 +138,76 @@ body {
 .animate-toast { animation: toast-in 0.2s ease-out; }
 
 /*
- * Page transitions. A tiny component (RouteEffects in App.tsx) sets data-nav on <html> before each page
- * mounts; every <Page> then slides/fades in accordingly:
- *   forward / back  drilling into or out of a page      - bigger slide
- *   tab-next / -prev  moving between the bottom tabs    - small slide in the tab's direction
- * --nav-dx flips the direction in Arabic (RTL), where "forward" is leftwards.
- * Only `backwards` fill: nothing stays applied afterwards, so fixed/sticky children behave normally.
+ * Page motion, in three steps:
+ *   1. the old page leaves quickly (fades and drifts toward where the user came from),
+ *   2. the new page arrives (pushing in from the side when drilling in, a short slide between tabs),
+ *   3. the new page's sections then appear one after another, top to bottom (.seq), and list
+ *      items after them (.stagger).
+ * Steps 1-2 use the View Transitions API (lib/nav.tsx) with the top bar and bottom tabs held in place.
+ * Without it (older browsers, browser back/forward) the page itself does a short entrance (.page-enter).
+ * RouteEffects in App.tsx sets data-nav (direction) and data-vt (a view transition is running).
+ * --nav-dx flips the horizontal direction in Arabic (RTL).
  */
-:root { --nav-dx: 1; }
+:root { --nav-dx: 1; --ease-out: cubic-bezier(0.16, 1, 0.3, 1); --ease-in: cubic-bezier(0.55, 0, 1, 0.45); }
 html[dir='rtl'] { --nav-dx: -1; }
 
-@keyframes page-in {
-  from { opacity: 0; transform: translateX(calc(var(--enter-x, 0px) * var(--nav-dx))) translateY(var(--enter-y, 0px)); }
-  to { opacity: 1; transform: none; }
-}
+@keyframes fade-up { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
 @keyframes rise-in { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
 @keyframes nav-pop { 0% { transform: scale(0.7); opacity: 0.4; } 60% { transform: scale(1.08); } 100% { transform: scale(1); opacity: 1; } }
+@keyframes page-in {
+  from { opacity: 0; transform: translateX(calc(var(--enter-x, 0px) * var(--nav-dx))); }
+  to { opacity: 1; transform: none; }
+}
 
-.page-enter { --enter-y: 8px; animation: page-in 0.28s cubic-bezier(0.2, 0.8, 0.2, 1) backwards; }
-html[data-nav='forward'] .page-enter { --enter-x: 34px; --enter-y: 0px; }
-html[data-nav='back'] .page-enter { --enter-x: -34px; --enter-y: 0px; }
-html[data-nav='tab-next'] .page-enter { --enter-x: 18px; --enter-y: 0px; }
-html[data-nav='tab-prev'] .page-enter { --enter-x: -18px; --enter-y: 0px; }
+/* Fallback entrance of the whole page (no view transition). */
+.page-enter { animation: page-in 0.32s var(--ease-out) backwards; }
+html[data-nav='forward'] .page-enter { --enter-x: 48px; }
+html[data-nav='back'] .page-enter { --enter-x: -48px; }
+html[data-nav='tab-next'] .page-enter { --enter-x: 24px; }
+html[data-nav='tab-prev'] .page-enter { --enter-x: -24px; }
+html[data-vt] .page-enter { animation: none; }
 
-.title-enter { animation: fade-in 0.25s ease-out backwards; }
-.animate-rise { animation: rise-in 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) backwards; }
-.nav-pop { animation: nav-pop 0.28s cubic-bezier(0.2, 0.8, 0.2, 1); }
+/* Step 3: sections of the page, one after another. */
+.seq > * { animation: fade-up 0.5s var(--ease-out) backwards; animation-delay: 0.1s; }
+.seq > :nth-child(2) { animation-delay: 0.16s; }
+.seq > :nth-child(3) { animation-delay: 0.22s; }
+.seq > :nth-child(4) { animation-delay: 0.28s; }
+.seq > :nth-child(5) { animation-delay: 0.34s; }
+.seq > :nth-child(n + 6) { animation-delay: 0.4s; }
 
-/* List items rise in one after another (first 8; the rest appear with the last delay). */
-.stagger > * { animation: rise-in 0.34s cubic-bezier(0.2, 0.8, 0.2, 1) backwards; }
-.stagger > :nth-child(2) { animation-delay: 0.03s; }
-.stagger > :nth-child(3) { animation-delay: 0.06s; }
-.stagger > :nth-child(4) { animation-delay: 0.09s; }
-.stagger > :nth-child(5) { animation-delay: 0.12s; }
-.stagger > :nth-child(6) { animation-delay: 0.15s; }
-.stagger > :nth-child(7) { animation-delay: 0.18s; }
-.stagger > :nth-child(n + 8) { animation-delay: 0.21s; }
+/* List items, after their section. */
+.stagger > * { animation: rise-in 0.45s var(--ease-out) backwards; animation-delay: 0.22s; }
+.stagger > :nth-child(2) { animation-delay: 0.27s; }
+.stagger > :nth-child(3) { animation-delay: 0.32s; }
+.stagger > :nth-child(4) { animation-delay: 0.37s; }
+.stagger > :nth-child(5) { animation-delay: 0.42s; }
+.stagger > :nth-child(6) { animation-delay: 0.47s; }
+.stagger > :nth-child(n + 7) { animation-delay: 0.52s; }
 
-/*
- * View transitions (lib/nav.tsx): where the browser supports them, a page change animates both pages -
- * the old one slides away while the new one slides in (push: nearly full width; tabs: a short slide) -
- * and the top bar, bottom tabs and desktop sidebar stay in place. The plain entrance animations above
- * are the fallback and are switched off while a view transition runs.
- */
+.title-enter { animation: fade-in 0.3s ease-out backwards; }
+html[data-vt] .title-enter { animation: none; }
+.animate-rise { animation: rise-in 0.35s var(--ease-out) backwards; }
+.nav-pop { animation: nav-pop 0.3s var(--ease-out); }
+
+/* Steps 1-2 with view transitions. */
 .vt-top-bar { view-transition-name: top-bar; }
 .vt-bottom-nav { view-transition-name: bottom-nav; }
 .vt-sidebar { view-transition-name: sidebar; }
-html[data-vt] .page-enter, html[data-vt] .stagger > *, html[data-vt] .title-enter { animation: none; }
 
-@keyframes vt-old-forward { to { transform: translateX(calc(var(--nav-dx) * -28%)); opacity: 0.4; } }
-@keyframes vt-new-forward { from { transform: translateX(calc(var(--nav-dx) * 100%)); } }
-@keyframes vt-old-back { to { transform: translateX(calc(var(--nav-dx) * 100%)); } }
-@keyframes vt-new-back { from { transform: translateX(calc(var(--nav-dx) * -28%)); opacity: 0.4; } }
-@keyframes vt-old-tab-next { to { transform: translateX(calc(var(--nav-dx) * -16%)); opacity: 0; } }
-@keyframes vt-new-tab-next { from { transform: translateX(calc(var(--nav-dx) * 16%)); opacity: 0; } }
-@keyframes vt-old-tab-prev { to { transform: translateX(calc(var(--nav-dx) * 16%)); opacity: 0; } }
-@keyframes vt-new-tab-prev { from { transform: translateX(calc(var(--nav-dx) * -16%)); opacity: 0; } }
+@keyframes vt-leave { to { opacity: 0; transform: translateX(calc(var(--nav-dx) * var(--vt-leave-x, 0%))) scale(var(--vt-leave-scale, 1)); } }
+@keyframes vt-arrive { from { opacity: var(--vt-arrive-opacity, 0); transform: translateX(calc(var(--nav-dx) * var(--vt-arrive-x, 0%))); } }
 
-::view-transition-old(root), ::view-transition-new(root) {
-  animation-duration: 0.36s;
-  animation-timing-function: cubic-bezier(0.22, 0.8, 0.2, 1);
-  animation-fill-mode: both;
-  mix-blend-mode: normal;
-}
-html[data-nav='forward']::view-transition-old(root) { animation-name: vt-old-forward; }
-html[data-nav='forward']::view-transition-new(root) { animation-name: vt-new-forward; }
-html[data-nav='back']::view-transition-old(root) { animation-name: vt-old-back; z-index: 2; }
-html[data-nav='back']::view-transition-new(root) { animation-name: vt-new-back; }
-html[data-nav='tab-next']::view-transition-old(root) { animation-name: vt-old-tab-next; }
-html[data-nav='tab-next']::view-transition-new(root) { animation-name: vt-new-tab-next; }
-html[data-nav='tab-prev']::view-transition-old(root) { animation-name: vt-old-tab-prev; }
-html[data-nav='tab-prev']::view-transition-new(root) { animation-name: vt-new-tab-prev; }
+::view-transition-old(root) { animation: vt-leave 0.16s var(--ease-in) both; mix-blend-mode: normal; }
+::view-transition-new(root) { animation: vt-arrive 0.42s var(--ease-out) 0.1s both; mix-blend-mode: normal; }
+
+/* Drilling in: old page recedes, new page pushes in from the side. Back: the reverse. */
+html[data-nav='forward'] { --vt-leave-x: -12%; --vt-leave-scale: 0.97; --vt-arrive-x: 40%; --vt-arrive-opacity: 0; }
+html[data-nav='back'] { --vt-leave-x: 12%; --vt-leave-scale: 0.97; --vt-arrive-x: -40%; --vt-arrive-opacity: 0; }
+/* Tabs: a short slide in the tab's direction. */
+html[data-nav='tab-next'] { --vt-leave-x: -6%; --vt-arrive-x: 10%; }
+html[data-nav='tab-prev'] { --vt-leave-x: 6%; --vt-arrive-x: -10%; }
 
 @media (prefers-reduced-motion: reduce) {
-  .animate-sheet, .animate-fade, .animate-toast, .page-enter, .title-enter, .animate-rise, .nav-pop, .stagger > * { animation: none; }
+  .animate-sheet, .animate-fade, .animate-toast, .page-enter, .title-enter, .animate-rise, .nav-pop, .seq > *, .stagger > * { animation: none; }
   ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) { animation: none; }
 }
