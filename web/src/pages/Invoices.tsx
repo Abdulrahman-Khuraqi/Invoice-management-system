@@ -80,7 +80,8 @@ export default function Invoices() {
 
   const hasMore = !!data && data.invoices.length < data.total
   const loadMore = useCallback(async () => {
-    if (!data || loadingMore || !hasMore) return
+    // While a new search/filter loads, `data` is still the old list: loading more now would overwrite the new results.
+    if (!data || loading || loadingMore || !hasMore) return
     setLoadingMore(true)
     try {
       const r = await fetchPage(data.page + 1)
@@ -90,7 +91,7 @@ export default function Invoices() {
     } finally {
       setLoadingMore(false)
     }
-  }, [data, loadingMore, hasMore, fetchPage, toast])
+  }, [data, loading, loadingMore, hasMore, fetchPage, toast])
 
   useEffect(() => {
     const el = sentinel.current
