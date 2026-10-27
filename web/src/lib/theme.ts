@@ -15,7 +15,7 @@ export function applyTheme(pref: ThemePref = getThemePref()) {
   const dark = pref === 'dark' || (pref === 'system' && media().matches)
   document.documentElement.classList.toggle('dark', dark)
   document.querySelectorAll('meta[name="theme-color"]').forEach((m) => {
-    m.setAttribute('content', dark ? '#0b0f17' : '#f4f5f9')
+    m.setAttribute('content', dark ? '#0c1018' : '#f2f4f8')
     m.removeAttribute('media')
   })
 }
