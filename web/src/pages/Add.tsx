@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate } from '../lib/nav'
 import { AlertTriangle, CheckCircle2, FileSpreadsheet, FileDown, Pencil, Plus, Upload, X } from 'lucide-react'
 import { api, errorMessage } from '../api'
 import { useApp } from '../context'

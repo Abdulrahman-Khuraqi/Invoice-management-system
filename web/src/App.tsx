@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useLayoutEffect, useRef } from 'react'
+import { transitionPending, transitionReady } from './lib/nav'
 import { Navigate, Route, Routes, useLocation, useNavigationType } from 'react-router-dom'
 import { api } from './api'
 import { AppProvider, useApp } from './context'
@@ -91,8 +92,14 @@ function RouteEffects() {
     const a = TABS.indexOf(from)
     const b = TABS.indexOf(pathname)
     const nav = a >= 0 && b >= 0 ? (b > a ? 'tab-next' : 'tab-prev') : type === 'POP' || depth(pathname) < depth(from) ? 'back' : 'forward'
-    document.documentElement.dataset.nav = nav
+    const root = document.documentElement
+    root.dataset.nav = nav
+    // While a view transition animates the page, the CSS entrance animations must stay off (they would be
+    // captured in their "invisible" first frame). A navigation without one (e.g. browser back) uses them.
+    if (transitionPending()) root.dataset.vt = '1'
+    else delete root.dataset.vt
     if (type !== 'POP') window.scrollTo(0, 0)
+    transitionReady()
   }, [pathname, type])
   return null
 }

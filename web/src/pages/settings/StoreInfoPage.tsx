@@ -1,4 +1,4 @@
-import { useNavigate } from 'react-router-dom'
+import { useNavigate } from '../../lib/nav'
 import { Info, Pencil } from 'lucide-react'
 import { storeLogoUrl } from '../../api'
 import { useApp } from '../../context'

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate } from '../lib/nav'
 import { BarChart3, CalendarDays, Download } from 'lucide-react'
 import { api, errorMessage } from '../api'
 import { useApp } from '../context'

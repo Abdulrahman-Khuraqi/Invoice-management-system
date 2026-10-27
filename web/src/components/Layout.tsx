@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react'
-import { NavLink, useNavigate } from 'react-router-dom'
+import { NavLink, useNavigate } from '../lib/nav'
 import { BarChart3, Check, ChevronDown, ChevronRight, FileText, Home, Plus, Settings, Store as StoreIcon, WifiOff } from 'lucide-react'
 import { ROLE_LABELS } from '../lib/format'
 import { useApp } from '../context'
@@ -18,7 +18,7 @@ const NAV = [
 export function BottomNav() {
   const { can } = useApp()
   return (
-    <nav className="safe-bottom fixed inset-x-0 bottom-0 z-40 border-t border-line bg-surface/95 backdrop-blur-md lg:hidden">
+    <nav className="vt-bottom-nav safe-bottom fixed inset-x-0 bottom-0 z-40 border-t border-line bg-surface/95 backdrop-blur-md lg:hidden">
       <div className="mx-auto flex max-w-2xl items-end justify-around px-2">
         {NAV.filter((n) => !n.center || can('editor')).map((n) =>
           n.center ? (
@@ -66,7 +66,7 @@ export function BottomNav() {
 export function Sidebar() {
   const { can, user } = useApp()
   return (
-    <aside className="fixed inset-y-0 start-0 z-40 hidden w-64 flex-col border-e border-line bg-surface lg:flex">
+    <aside className="vt-sidebar fixed inset-y-0 start-0 z-40 hidden w-64 flex-col border-e border-line bg-surface lg:flex">
       <div className="flex h-18 items-center gap-3 px-5">
         <span className="flex size-10 items-center justify-center rounded-xl bg-primary text-primary-fg shadow-md shadow-primary/25">
           <FileText className="size-5" />
@@ -152,7 +152,7 @@ export function useIsDesktop() {
 export function TopBar({ title, back, switcher, actions }: { title: string; back?: boolean; switcher?: boolean; actions?: ReactNode }) {
   const navigate = useNavigate()
   return (
-    <header className="safe-top sticky top-0 z-30 bg-bg/90 backdrop-blur-md">
+    <header className="vt-top-bar safe-top sticky top-0 z-30 bg-bg/90 backdrop-blur-md">
       <div className="mx-auto flex min-h-16 max-w-2xl items-center gap-2 px-4 lg:min-h-[72px] lg:max-w-6xl lg:px-8">
         {back && (
           <IconButton label={t('رجوع')} onClick={() => navigate(-1)} className="-ms-2">

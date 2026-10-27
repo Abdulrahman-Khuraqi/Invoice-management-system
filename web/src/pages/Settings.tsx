@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate } from '../lib/nav'
 import { ChevronLeft, History, Info, KeyRound, LogOut, Monitor, Moon, Package, Smartphone, Store as StoreIcon, Sun, Users } from 'lucide-react'
 import { api, errorMessage } from '../api'
 import { useApp } from '../context'

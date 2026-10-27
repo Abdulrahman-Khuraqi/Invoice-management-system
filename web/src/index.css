@@ -175,6 +175,42 @@ html[data-nav='tab-prev'] .page-enter { --enter-x: -18px; --enter-y: 0px; }
 .stagger > :nth-child(7) { animation-delay: 0.18s; }
 .stagger > :nth-child(n + 8) { animation-delay: 0.21s; }
 
+/*
+ * View transitions (lib/nav.tsx): where the browser supports them, a page change animates both pages -
+ * the old one slides away while the new one slides in (push: nearly full width; tabs: a short slide) -
+ * and the top bar, bottom tabs and desktop sidebar stay in place. The plain entrance animations above
+ * are the fallback and are switched off while a view transition runs.
+ */
+.vt-top-bar { view-transition-name: top-bar; }
+.vt-bottom-nav { view-transition-name: bottom-nav; }
+.vt-sidebar { view-transition-name: sidebar; }
+html[data-vt] .page-enter, html[data-vt] .stagger > *, html[data-vt] .title-enter { animation: none; }
+
+@keyframes vt-old-forward { to { transform: translateX(calc(var(--nav-dx) * -28%)); opacity: 0.4; } }
+@keyframes vt-new-forward { from { transform: translateX(calc(var(--nav-dx) * 100%)); } }
+@keyframes vt-old-back { to { transform: translateX(calc(var(--nav-dx) * 100%)); } }
+@keyframes vt-new-back { from { transform: translateX(calc(var(--nav-dx) * -28%)); opacity: 0.4; } }
+@keyframes vt-old-tab-next { to { transform: translateX(calc(var(--nav-dx) * -16%)); opacity: 0; } }
+@keyframes vt-new-tab-next { from { transform: translateX(calc(var(--nav-dx) * 16%)); opacity: 0; } }
+@keyframes vt-old-tab-prev { to { transform: translateX(calc(var(--nav-dx) * 16%)); opacity: 0; } }
+@keyframes vt-new-tab-prev { from { transform: translateX(calc(var(--nav-dx) * -16%)); opacity: 0; } }
+
+::view-transition-old(root), ::view-transition-new(root) {
+  animation-duration: 0.36s;
+  animation-timing-function: cubic-bezier(0.22, 0.8, 0.2, 1);
+  animation-fill-mode: both;
+  mix-blend-mode: normal;
+}
+html[data-nav='forward']::view-transition-old(root) { animation-name: vt-old-forward; }
+html[data-nav='forward']::view-transition-new(root) { animation-name: vt-new-forward; }
+html[data-nav='back']::view-transition-old(root) { animation-name: vt-old-back; z-index: 2; }
+html[data-nav='back']::view-transition-new(root) { animation-name: vt-new-back; }
+html[data-nav='tab-next']::view-transition-old(root) { animation-name: vt-old-tab-next; }
+html[data-nav='tab-next']::view-transition-new(root) { animation-name: vt-new-tab-next; }
+html[data-nav='tab-prev']::view-transition-old(root) { animation-name: vt-old-tab-prev; }
+html[data-nav='tab-prev']::view-transition-new(root) { animation-name: vt-new-tab-prev; }
+
 @media (prefers-reduced-motion: reduce) {
   .animate-sheet, .animate-fade, .animate-toast, .page-enter, .title-enter, .animate-rise, .nav-pop, .stagger > * { animation: none; }
+  ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) { animation: none; }
 }

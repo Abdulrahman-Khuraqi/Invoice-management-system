@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useSearchParams } from 'react-router-dom'
+import { useNavigate } from '../lib/nav'
 import { Check, CheckCircle2, RefreshCw, SkipForward, Sparkles, Tag, Undo2, WifiOff } from 'lucide-react'
 import { api, errorMessage } from '../api'
 import { useApp } from '../context'

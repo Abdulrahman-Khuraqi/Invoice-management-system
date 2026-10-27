@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useSearchParams } from 'react-router-dom'
+import { useNavigate } from '../lib/nav'
 import { ArrowLeftRight, CalendarDays, CheckSquare, Download, FileText, SlidersHorizontal, Tag, Trash2, X, Search, Zap } from 'lucide-react'
 import { api, errorMessage } from '../api'
 import { useApp } from '../context'
