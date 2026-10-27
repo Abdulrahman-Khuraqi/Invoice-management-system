@@ -1,14 +1,15 @@
 import { useRef, useState, type ReactNode } from 'react'
-import { AlertCircle, Check, Copy, Pencil, Tag, Trash2 } from 'lucide-react'
+import { AlertCircle, Check, Copy, FileDown, ImageDown, Pencil, Tag, Trash2 } from 'lucide-react'
 import { api, errorMessage } from '../api'
 import { useApp } from '../context'
 import { fmtDate, fmtDateTime, money, payLabel } from '../lib/format'
 import type { CatalogItem, Invoice } from '../types'
 import { useFeedback } from './Feedback'
 import { InvoiceForm } from './InvoiceForm'
+import { InvoicePaperPreview, useInvoicePaperExport } from './InvoicePaper'
 import { ItemPicker } from './ItemPicker'
 import { Sheet } from './Sheet'
-import { Badge, Button, Money, StoreDot, cx } from './ui'
+import { Badge, Button, Money, Segmented, StoreDot, cx } from './ui'
 
 export function ItemChips({ invoice, max = 2 }: { invoice: Invoice; max?: number }) {
   if (!invoice.lines.length) {
@@ -152,9 +153,12 @@ export function InvoiceSheet({
   const [editing, setEditing] = useState(false)
   const [picker, setPicker] = useState(false)
   const [busy, setBusy] = useState(false)
+  const [view, setView] = useState<'paper' | 'details'>('paper')
+  const paperExport = useInvoicePaperExport(invoice)
 
   const close = () => {
     setEditing(false)
+    setView('paper')
     onClose()
   }
 
@@ -216,7 +220,24 @@ export function InvoiceSheet({
   }
 
   return (
-    <Sheet open={!!invoice} onClose={close} title={editing ? 'تعديل الفاتورة' : 'تفاصيل الفاتورة'}>
+    <Sheet
+      open={!!invoice}
+      onClose={close}
+      title={editing ? 'تعديل الفاتورة' : view === 'paper' ? 'الفاتورة' : 'تفاصيل الفاتورة'}
+      footer={
+        invoice && !editing && view === 'paper' ? (
+          <div className="flex gap-3">
+            <Button block variant="secondary" loading={paperExport.exporting === 'png'} disabled={!!paperExport.exporting} icon={<ImageDown className="size-5" />} onClick={() => paperExport.exportAs('png')}>
+              صورة
+            </Button>
+            <Button block loading={paperExport.exporting === 'pdf'} disabled={!!paperExport.exporting} icon={<FileDown className="size-5" />} onClick={() => paperExport.exportAs('pdf')}>
+              PDF
+            </Button>
+          </div>
+        ) : undefined
+      }
+    >
+      {paperExport.host}
       {invoice && editing && (
         <InvoiceForm
           initial={invoice}
@@ -228,6 +249,19 @@ export function InvoiceSheet({
         />
       )}
       {invoice && !editing && (
+        <div className="mb-4">
+          <Segmented
+            value={view}
+            onChange={setView}
+            options={[
+              { value: 'paper', label: 'الفاتورة' },
+              { value: 'details', label: 'التفاصيل' },
+            ]}
+          />
+        </div>
+      )}
+      {invoice && !editing && view === 'paper' && <InvoicePaperPreview invoice={invoice} />}
+      {invoice && !editing && view === 'details' && (
         <div>
           <div className="mb-4 rounded-3xl bg-surface-2 p-5 text-center">
             <Money value={invoice.amount} className="text-[32px] font-bold" />

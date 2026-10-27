@@ -1,0 +1,197 @@
+/*
+ * The printable invoice paper. Plain CSS with hex colors on purpose: it is rasterized for
+ * PNG/PDF export and must look the same in light and dark mode, so it ignores the app theme.
+ * Fixed A4 width (794px @ 96dpi); the preview scales it down with a CSS transform.
+ */
+.ip {
+  --ip-accent: #111827;
+  --ip-ink: #111827;
+  --ip-muted: #6b7280;
+  --ip-line: #e5e7eb;
+  box-sizing: border-box;
+  width: 794px;
+  min-height: 1123px;
+  display: flex;
+  flex-direction: column;
+  padding: 56px 56px 48px;
+  background: #fff;
+  color: var(--ip-ink);
+  font-family: 'IBM Plex Sans Arabic', Arial, Helvetica, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  direction: ltr;
+  text-align: left;
+}
+.ip *,
+.ip *::before,
+.ip *::after {
+  box-sizing: border-box;
+}
+.ip h1,
+.ip h3,
+.ip p {
+  margin: 0;
+}
+
+.ip-brand {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  color: var(--ip-muted);
+}
+.ip-head-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  margin-top: 14px;
+}
+.ip-title {
+  font-size: 30px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--ip-accent);
+}
+.ip-logo {
+  display: block;
+  max-width: 180px;
+  max-height: 72px;
+  object-fit: contain;
+}
+.ip-rule {
+  height: 3px;
+  margin-top: 18px;
+  background: var(--ip-accent);
+}
+
+.ip-parties {
+  display: flex;
+  justify-content: space-between;
+  gap: 40px;
+  margin-top: 36px;
+}
+.ip-block {
+  flex: 1 1 0;
+  min-width: 0;
+}
+.ip-block h3 {
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.ip-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 18px;
+}
+.ip-meta-label,
+.ip-field-label {
+  color: var(--ip-muted);
+  font-weight: 600;
+}
+.ip-meta-value {
+  font-weight: 600;
+}
+.ip-company-info {
+  margin-top: 4px;
+  color: var(--ip-muted);
+}
+.ip-field {
+  margin-top: 10px;
+}
+.ip-field-label {
+  display: block;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.ip-field-value {
+  display: block;
+  font-size: 15px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.ip-table {
+  width: 100%;
+  margin-top: 40px;
+  border-collapse: collapse;
+}
+.ip-table th {
+  padding: 10px 12px;
+  background: #f3f4f6;
+  border-bottom: 2px solid var(--ip-accent);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  text-align: right;
+}
+.ip-table td {
+  padding: 14px 12px;
+  border-bottom: 1px solid var(--ip-line);
+  text-align: right;
+  vertical-align: top;
+  white-space: nowrap;
+}
+.ip-table .ip-col-desc {
+  width: 46%;
+  text-align: left;
+  white-space: normal;
+}
+.ip-table .ip-col-qty {
+  text-align: center;
+}
+.ip-item-name {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.ip-item-note {
+  margin-top: 2px;
+  font-size: 12px;
+  color: var(--ip-muted);
+}
+
+.ip-totals {
+  width: 320px;
+  margin: 24px 0 0 auto;
+  border-collapse: collapse;
+}
+.ip-totals td {
+  padding: 8px 12px;
+  text-align: right;
+}
+.ip-totals td:first-child {
+  text-align: left;
+  color: var(--ip-muted);
+  font-weight: 600;
+}
+.ip-totals .ip-total-row td {
+  padding-top: 12px;
+  border-top: 2px solid var(--ip-accent);
+  color: var(--ip-ink);
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.ip-footer {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: auto;
+  padding-top: 40px;
+}
+.ip-seal {
+  display: block;
+  max-width: 170px;
+  max-height: 170px;
+  object-fit: contain;
+}
+
+/* Keeps digits and currency together and left-to-right, even next to Arabic names. */
+.ip-num {
+  unicode-bidi: isolate;
+  font-variant-numeric: tabular-nums;
+}
