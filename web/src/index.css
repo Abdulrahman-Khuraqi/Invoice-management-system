@@ -3,14 +3,14 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 :root {
-  --bg: #f4f5f9;
+  --bg: #f2f4f8;
   --surface: #ffffff;
-  --surface-2: #eef0f6;
-  --line: #e3e6ee;
-  --fg: #0f172a;
-  --muted: #64748b;
-  --primary: #4f46e5;
-  --primary-soft: #eceafe;
+  --surface-2: #e8ecf3;
+  --line: #dbe1eb;
+  --fg: #121926;
+  --muted: #606a7b;
+  --primary: #1d4ed8;
+  --primary-soft: #e8edfb;
   --primary-fg: #ffffff;
   --warn: #c2410c;
   --warn-soft: #fff1e6;
@@ -23,15 +23,15 @@
 }
 
 .dark {
-  --bg: #0b0f17;
-  --surface: #131a26;
-  --surface-2: #1b2433;
-  --line: #243045;
-  --fg: #e7eaf0;
-  --muted: #8d97a9;
-  --primary: #8b85ff;
-  --primary-soft: #23264a;
-  --primary-fg: #0b0f17;
+  --bg: #0c1018;
+  --surface: #141a24;
+  --surface-2: #1c2430;
+  --line: #293242;
+  --fg: #e7eaef;
+  --muted: #929baa;
+  --primary: #6b9bff;
+  --primary-soft: #222f47;
+  --primary-fg: #0c1018;
   --warn: #fb923c;
   --warn-soft: #3a2414;
   --danger: #f87171;
@@ -87,11 +87,23 @@ body {
 
   /* Dropdown arrow on the left (end side in RTL). */
   select {
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='%238d97a9' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='%23929baa' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
     background-repeat: no-repeat;
     background-position: left 14px center;
     background-size: 20px;
     padding-left: 44px !important;
+  }
+
+  /* Mouse users expect a pointer cursor on clickable things. */
+  button:not(:disabled), [role='button'], select, summary {
+    cursor: pointer;
+  }
+
+  /* English (left-to-right): the arrow moves to the right side. */
+  [dir='ltr'] select {
+    background-position: right 14px center;
+    padding-left: 16px !important;
+    padding-right: 44px !important;
   }
 
   /* 16px inputs stop iOS from zooming on focus. */
@@ -110,7 +122,10 @@ body {
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { scrollbar-width: none; }
 
-.pb-nav { padding-bottom: calc(88px + env(safe-area-inset-bottom)); }
+/* Room for the bottom bar — phones only; desktop uses the sidebar. */
+@media (max-width: 1023.98px) {
+  .pb-nav { padding-bottom: calc(88px + env(safe-area-inset-bottom)); }
+}
 .safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
 .safe-top { padding-top: env(safe-area-inset-top); }
 

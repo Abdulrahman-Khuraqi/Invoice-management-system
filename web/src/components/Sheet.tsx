@@ -2,6 +2,7 @@ import { useEffect, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { X } from 'lucide-react'
 import { IconButton } from './ui'
+import { t } from '../lib/i18n'
 
 /** Bottom sheet on phones, centered dialog on wide screens. */
 export function Sheet({
@@ -37,7 +38,7 @@ export function Sheet({
         <div className="mx-auto mt-2.5 h-1.5 w-10 rounded-full bg-line sm:hidden" />
         <div className="flex items-center justify-between gap-2 px-5 pb-2 pt-3">
           <h2 className="min-w-0 truncate text-[19px] font-bold">{title}</h2>
-          <IconButton label="إغلاق" onClick={onClose} className="-me-2">
+          <IconButton label={t('إغلاق')} onClick={onClose} className="-me-2">
             <X className="size-6" />
           </IconButton>
         </div>

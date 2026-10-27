@@ -1,15 +1,24 @@
 <?php
 defined('APP') or exit;
 
-/** Returns which of the given gateway TransactionIDs already exist, for the import preview. */
+/**
+ * Import preview. Body: { transaction_ids: [...], ids: [...] }.
+ * Returns `existing` (which TransactionIDs are already stored, so re-imports skip them) and `invoices`
+ * (full current data of the invoices matching a TransactionID or a system id, within the user's stores),
+ * which the app compares with an edited Excel file to offer updates.
+ */
 function import_check(): void
 {
-    require_user('editor');
-    $ids = body()['transaction_ids'] ?? [];
-    if (!is_array($ids) || count($ids) > 5000) {
+    $u = require_user('editor');
+    $b = body();
+    $ids = $b['transaction_ids'] ?? [];
+    $invIds = $b['ids'] ?? [];
+    if (!is_array($ids) || !is_array($invIds) || count($ids) > 5000 || count($invIds) > 5000) {
         fail(422, 'قائمة غير صحيحة');
     }
     $ids = array_values(array_unique(array_filter(array_map(fn($v) => is_scalar($v) ? substr((string)$v, 0, 64) : '', $ids))));
+    $invIds = array_values(array_unique(array_filter(array_map('intval', $invIds), fn($i) => $i > 0)));
+
     $existing = [];
     foreach (array_chunk($ids, 500) as $chunk) {
         $existing = array_merge($existing, array_column(
@@ -17,7 +26,101 @@ function import_check(): void
             'transaction_id'
         ));
     }
-    json_out(['existing' => $existing]);
+
+    [$scope, $scopeParams] = store_scope_sql($u, 'i.store_id');
+    $found = [];
+    foreach (array_chunk($ids, 500) as $chunk) {
+        foreach (all('SELECT ' . INVOICE_COLUMNS . ' ' . INVOICE_FROM . ' WHERE i.transaction_id IN (' . placeholders($chunk) . ") AND $scope", array_merge($chunk, $scopeParams)) as $r) {
+            $found[(int)$r['id']] = $r;
+        }
+    }
+    foreach (array_chunk($invIds, 500) as $chunk) {
+        foreach (all('SELECT ' . INVOICE_COLUMNS . ' ' . INVOICE_FROM . ' WHERE i.id IN (' . placeholders($chunk) . ") AND $scope", array_merge($chunk, $scopeParams)) as $r) {
+            $found[(int)$r['id']] = $r;
+        }
+    }
+    json_out(['existing' => $existing, 'invoices' => attach_lines(array_map('cast_invoice', array_values($found)))]);
+}
+
+const IMPORT_UPDATE_FIELDS = ['store_id', 'paid_at', 'amount', 'customer_name', 'phone', 'email', 'invoice_no',
+    'pay_method', 'note', 'card_type', 'card_last4', 'reference_no', 'auth_code'];
+
+/**
+ * Updates existing invoices from an edited Excel file.
+ * Body: { rows: [{ id, <any of IMPORT_UPDATE_FIELDS>, items?: [{item_id, qty?, unit_price?}] }], file_name }.
+ * Only the given fields change; a row that fails validation is rolled back on its own and reported,
+ * the rest still apply. Returns { updated, unchanged, errors: [{id, message}] }.
+ */
+function import_update(): void
+{
+    $u = require_user('editor');
+    $b = body();
+    $rows = $b['rows'] ?? null;
+    if (!is_array($rows) || !$rows) {
+        fail(422, 'لا توجد بيانات للتحديث');
+    }
+    if (count($rows) > 500) {
+        fail(422, 'الدفعة كبيرة جداً، الحد 500 صف');
+    }
+
+    $updated = 0;
+    $unchanged = 0;
+    $errors = [];
+    db()->beginTransaction();
+    foreach ($rows as $r) {
+        if (!is_array($r)) {
+            fail(422, 'صف غير صحيح');
+        }
+        $id = int_in($r['id'] ?? null, true, 'معرّف الفاتورة');
+        db()->exec('SAVEPOINT row_update');
+        try {
+            $existing = load_invoice($id, $u);
+            $patch = array_intersect_key($r, array_flip(IMPORT_UPDATE_FIELDS));
+            $d = invoice_input($patch + $existing, $u, $existing['store_id']);
+            $hasItems = array_key_exists('items', $r);
+            if (!$hasItems && !invoice_fields_changed($existing, $d)) {
+                $unchanged++;
+                db()->exec('RELEASE SAVEPOINT row_update');
+                continue;
+            }
+            q(
+                'UPDATE invoices SET store_id = ?, invoice_no = ?, customer_name = ?, email = ?, phone = ?, amount = ?, status = ?,
+                    pay_method = ?, card_type = ?, card_last4 = ?, reference_no = ?, auth_code = ?, paid_at = ?, note = ?, updated_by = ?
+                 WHERE id = ?',
+                [$d['store_id'], $d['invoice_no'], $d['customer_name'], $d['email'], $d['phone'], $d['amount'], $d['status'],
+                    $d['pay_method'], $d['card_type'], $d['card_last4'], $d['reference_no'], $d['auth_code'], $d['paid_at'],
+                    $d['note'], $u['id'], $id]
+            );
+            if ($hasItems) {
+                save_lines($id, $d['store_id'], $r['items'], $d['amount'], $u, array_column($existing['lines'], 'item_id'));
+            }
+            db()->exec('RELEASE SAVEPOINT row_update');
+            $updated++;
+        } catch (HttpError $e) {
+            db()->exec('ROLLBACK TO SAVEPOINT row_update');
+            $errors[] = ['id' => $id, 'message' => $e->getMessage()];
+        }
+    }
+    if ($updated > 0) {
+        $file = str_in($b['file_name'] ?? null, 120);
+        log_activity($u, 'update', 'invoice', null, "تحديث $updated فاتورة من ملف Excel" . ($file ? " ($file)" : ''));
+    }
+    db()->commit();
+    json_out(['updated' => $updated, 'unchanged' => $unchanged, 'errors' => $errors]);
+}
+
+function invoice_fields_changed(array $old, array $new): bool
+{
+    foreach (IMPORT_UPDATE_FIELDS as $f) {
+        if ($f === 'amount') {
+            if (abs((float)$old['amount'] - (float)$new['amount']) > 0.004) {
+                return true;
+            }
+        } elseif ((string)($old[$f] ?? '') !== (string)($new[$f] ?? '')) {
+            return true;
+        }
+    }
+    return false;
 }
 
 /**

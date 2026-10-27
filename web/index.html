@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <title>إدارة الفواتير</title>
     <meta name="description" content="نظام إدارة فواتير المتاجر" />
-    <meta name="theme-color" content="#f6f7fb" media="(prefers-color-scheme: light)" />
-    <meta name="theme-color" content="#0b0f17" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#f2f4f8" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0c1018" media="(prefers-color-scheme: dark)" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
@@ -15,8 +15,13 @@
     <link rel="icon" href="./icons/icon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png" />
     <script>
-      // Apply the saved theme before first paint to avoid a flash.
+      // Apply the saved language (direction) and theme before first paint to avoid a flash.
       (function () {
+        var en = false;
+        try { en = localStorage.getItem('lang') === 'en'; } catch (e) {}
+        document.documentElement.lang = en ? 'en' : 'ar';
+        document.documentElement.dir = en ? 'ltr' : 'rtl';
+        if (en) document.title = 'Invoice Manager';
         var t = 'system';
         try { t = localStorage.getItem('theme') || 'system'; } catch (e) {}
         var dark = t === 'dark' || (t === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);

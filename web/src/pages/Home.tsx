@@ -10,6 +10,7 @@ import { Button, Card, Chip, EmptyState, Money, PageLoader, SectionTitle, StoreD
 import { RANGE_LABELS, money, rangeDates, type RangeKey } from '../lib/format'
 import { load, save } from '../lib/storage'
 import type { Invoice, InvoiceList, Stats } from '../types'
+import { t } from '../lib/i18n'
 
 const HOME_RANGES: RangeKey[] = ['month', 'last_month', 'year', 'all']
 
@@ -40,7 +41,7 @@ export default function Home() {
 
   return (
     <>
-      <TopBar title="الرئيسية" switcher />
+      <TopBar title={t('الرئيسية')} switcher />
       <Page>
         <div className="no-scrollbar -mx-4 mb-4 flex gap-2 overflow-x-auto px-4">
           {HOME_RANGES.map((k) => (
@@ -60,44 +61,47 @@ export default function Home() {
         {!stats && <PageLoader />}
         {stats && (
           <>
-            <div className="rounded-[28px] bg-primary p-5 text-primary-fg shadow-lg shadow-primary/25">
-              <p className="text-[15px] opacity-85">إجمالي المبيعات · {RANGE_LABELS[range]}</p>
-              <p className="mt-1 text-[34px] font-bold leading-tight">
+            <div className="lg:grid lg:grid-cols-3 lg:gap-4">
+            <div className={`rounded-[28px] bg-primary p-5 text-primary-fg shadow-lg shadow-primary/25 lg:p-7 ${stats.unclassified > 0 ? 'lg:col-span-2' : 'lg:col-span-3'}`}>
+              <p className="text-[15px] opacity-85">{t('إجمالي المبيعات · {0}', RANGE_LABELS[range])}</p>
+              <p className="mt-1 text-[34px] font-bold leading-tight lg:text-[44px]">
                 <span className="num">{money(stats.sum)}</span>
-                <span className="ms-1.5 text-[18px] font-medium opacity-80">ر.س</span>
+                <span className="ms-1.5 text-[18px] font-medium opacity-80">{t('ر.س')}</span>
               </p>
               <p className="mt-1 text-[15px] opacity-85">
-                <span className="num">{stats.count}</span> فاتورة
+                <span className="num">{t('{0} فاتورة', stats.count)}</span>
               </p>
             </div>
 
             {stats.unclassified > 0 && (
               <button
                 onClick={() => navigate(`/invoices?unclassified=1${rangeQuery()}`)}
-                className="mt-3 flex w-full items-center gap-3 rounded-3xl border border-warn/30 bg-warn-soft p-4 text-start transition active:scale-[0.99]"
+                className="mt-3 flex w-full items-center gap-3 rounded-3xl border border-warn/30 bg-warn-soft p-4 text-start transition hover:brightness-95 active:scale-[0.99] lg:mt-0 lg:flex-col lg:items-start lg:justify-center lg:gap-4 lg:p-6"
               >
                 <span className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-warn text-white">
                   <AlertCircle className="size-6" />
                 </span>
                 <span className="flex-1">
                   <span className="block text-[17px] font-bold text-warn">
-                    <span className="num">{stats.unclassified}</span> فاتورة غير مصنّفة
+                    <span className="num">{t('{0} فاتورة غير مصنّفة', stats.unclassified)}</span>
                   </span>
-                  <span className="text-[14px] text-warn/80">حدد الخدمة أو المنتج لكل فاتورة</span>
+                  <span className="text-[14px] text-warn/80">{t('حدد الخدمة أو المنتج لكل فاتورة')}</span>
                 </span>
-                <ChevronLeft className="size-6 text-warn" />
+                <ChevronLeft className="size-6 text-warn lg:hidden ltr:rotate-180" />
               </button>
             )}
+            </div>
 
             {stats.count === 0 && (
               <EmptyState
                 icon={<FileSpreadsheet className="size-8" />}
-                title="لا توجد فواتير في هذه الفترة"
-                text="ابدأ باستيراد ملفات Excel من بوابة الدفع أو أضف فاتورة يدوياً"
+                title={t('لا توجد فواتير في هذه الفترة')}
+                text={t('ابدأ باستيراد ملفات Excel من بوابة الدفع أو أضف فاتورة يدوياً')}
                 action={
                   can('editor') && (
                     <Button icon={<Plus className="size-5" />} onClick={() => navigate('/add')}>
-                      إضافة فواتير
+                      
+                      {t('إضافة فواتير')}
                     </Button>
                   )
                 }
@@ -106,17 +110,17 @@ export default function Home() {
 
             {!currentStore && stats.by_store.length > 0 && (
               <>
-                <SectionTitle>المتاجر</SectionTitle>
-                <div className="grid grid-cols-2 gap-3">
+                <SectionTitle>{t('المتاجر')}</SectionTitle>
+                <div className="grid grid-cols-2 gap-3 lg:grid-cols-[repeat(auto-fit,minmax(220px,1fr))] lg:gap-4">
                   {stats.by_store.map((s) => (
                     <Card key={s.id} className="p-4" onClick={() => (setCurrentStore(s.id!), navigate(`/invoices?${rangeQuery().slice(1)}`))}>
                       <span className="flex items-center gap-2 text-[15px] font-semibold">
-                        <StoreDot color={s.color!} className="size-3" />
+                        <StoreDot color={s.color!} className="size-3" storeId={s.id} />
                         <span className="truncate">{s.name}</span>
                       </span>
                       <Money value={s.total} className="mt-2 block text-[19px] font-bold" />
                       <span className="text-[13px] text-muted">
-                        <span className="num">{s.n}</span> فاتورة
+                        <span className="num">{t('{0} فاتورة', s.n)}</span>
                       </span>
                     </Card>
                   ))}
@@ -124,16 +128,19 @@ export default function Home() {
               </>
             )}
 
+            <div className="lg:grid lg:grid-cols-2 lg:items-start lg:gap-8">
             {stats.by_item.length > 0 && (
-              <>
+              <div>
                 <SectionTitle
                   action={
                     <button className="text-[14px] font-semibold text-primary" onClick={() => navigate('/reports')}>
-                      التقارير
+                      
+                      {t('التقارير')}
                     </button>
                   }
                 >
-                  الأكثر مبيعاً
+                  
+                  {t('الأكثر مبيعاً')}
                 </SectionTitle>
                 <Card className="p-2">
                   {stats.by_item.slice(0, 5).map((it) => (
@@ -145,34 +152,37 @@ export default function Home() {
                       <span className="min-w-0 flex-1">
                         <span className="block truncate text-[16px] font-semibold">{it.name}</span>
                         <span className="text-[13px] text-muted">
-                          <span className="num">{it.n}</span> فاتورة
+                          <span className="num">{t('{0} فاتورة', it.n)}</span>
                         </span>
                       </span>
                       <Money value={it.total} className="text-[16px] font-bold" />
                     </button>
                   ))}
                 </Card>
-              </>
+              </div>
             )}
 
             {recent.length > 0 && (
-              <>
+              <div>
                 <SectionTitle
                   action={
                     <button className="text-[14px] font-semibold text-primary" onClick={() => navigate('/invoices?sort=added_desc')}>
-                      عرض الكل
+                      
+                      {t('عرض الكل')}
                     </button>
                   }
                 >
-                  آخر ما أُضيف
+                  
+                  {t('آخر ما أُضيف')}
                 </SectionTitle>
                 <div className="space-y-2.5">
                   {recent.map((inv) => (
                     <InvoiceCard key={inv.id} invoice={inv} showStore={!currentStore} onOpen={() => setOpen(inv)} />
                   ))}
                 </div>
-              </>
+              </div>
             )}
+            </div>
           </>
         )}
       </Page>

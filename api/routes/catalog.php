@@ -81,9 +81,11 @@ function items_list(): void
 
     $rows = all(
         'SELECT i.id, i.kind, i.name, i.description, i.category_id, i.store_id, i.default_price, i.sku, i.is_active,
+                r.price_min, r.price_max,
                 c.name AS category_name, c.color AS category_color, s.name AS store_name,
                 (SELECT COUNT(*) FROM invoice_items ii WHERE ii.item_id = i.id) AS usage_count
          FROM catalog_items i
+         LEFT JOIN catalog_item_ranges r ON r.item_id = i.id
          LEFT JOIN catalog_categories c ON c.id = i.category_id
          LEFT JOIN stores s ON s.id = i.store_id
          WHERE ' . implode(' AND ', $where) . '
@@ -95,6 +97,8 @@ function items_list(): void
         $r['category_id'] = $r['category_id'] === null ? null : (int)$r['category_id'];
         $r['store_id'] = $r['store_id'] === null ? null : (int)$r['store_id'];
         $r['default_price'] = $r['default_price'] === null ? null : (float)$r['default_price'];
+        $r['price_min'] = $r['price_min'] === null ? null : (float)$r['price_min'];
+        $r['price_max'] = $r['price_max'] === null ? null : (float)$r['price_max'];
         $r['is_active'] = (bool)$r['is_active'];
         $r['usage_count'] = (int)$r['usage_count'];
     }
@@ -111,6 +115,7 @@ function items_create(): void
         [$data['kind'], $data['name'], $data['description'], $data['category_id'], $data['store_id'], $data['default_price'], $data['sku']]
     );
     $id = (int)db()->lastInsertId();
+    item_range_save($id, $data['price_min'], $data['price_max']);
     log_activity($u, 'create', 'item', $id, ($data['kind'] === 'service' ? 'إضافة خدمة: ' : 'إضافة منتج: ') . $data['name']);
     json_out(['id' => $id]);
 }
@@ -131,6 +136,10 @@ function items_update(string $id): void
          WHERE id = ?',
         [$data['kind'], $data['name'], $data['description'], $data['category_id'], $data['store_id'], $data['default_price'], $data['sku'], (int)$active, (int)$id]
     );
+    // Clients that don't send the range keys leave the stored range alone.
+    if (array_key_exists('price_min', body()) || array_key_exists('price_max', body())) {
+        item_range_save((int)$id, $data['price_min'], $data['price_max']);
+    }
     log_activity($u, 'update', 'item', (int)$id, 'تعديل: ' . $data['name']);
     json_out(['ok' => true]);
 }
@@ -169,6 +178,14 @@ function item_input(array $b, array $u): array
     if ($price !== null && $price < 0) {
         fail(422, 'السعر غير صحيح');
     }
+    $min = money_in($b['price_min'] ?? null, false, 'أقل سعر');
+    $max = money_in($b['price_max'] ?? null, false, 'أعلى سعر');
+    if (($min === null) !== ($max === null)) {
+        fail(422, 'أدخل أقل سعر وأعلى سعر معاً');
+    }
+    if ($min !== null && ($min < 0 || $max < $min)) {
+        fail(422, 'نطاق السعر غير صحيح');
+    }
     return [
         'kind' => $kind,
         'name' => str_in($b['name'] ?? null, 160, true, 'الاسم'),
@@ -176,8 +193,24 @@ function item_input(array $b, array $u): array
         'category_id' => $categoryId,
         'store_id' => $storeId,
         'default_price' => $price,
+        'price_min' => $min,
+        'price_max' => $max,
         'sku' => str_in($b['sku'] ?? null, 64),
     ];
+}
+
+/** Saves the optional price range of an item; null/null removes it. */
+function item_range_save(int $itemId, ?float $min, ?float $max): void
+{
+    if ($min === null || $max === null) {
+        q('DELETE FROM catalog_item_ranges WHERE item_id = ?', [$itemId]);
+        return;
+    }
+    q(
+        'INSERT INTO catalog_item_ranges (item_id, price_min, price_max) VALUES (?, ?, ?)
+         ON DUPLICATE KEY UPDATE price_min = VALUES(price_min), price_max = VALUES(price_max)',
+        [$itemId, $min, $max]
+    );
 }
 
 function find_item(int $id, array $u): array

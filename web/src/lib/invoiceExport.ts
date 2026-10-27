@@ -1,5 +1,7 @@
 /** Rasterizes the invoice paper and saves it as PNG or PDF. html2canvas/jsPDF load only when needed. */
 
+import { t } from './i18n'
+
 // Mobile browsers cap canvas size (iOS Safari: ~16.7M pixels), so long invoices render at a lower scale.
 const MAX_PIXELS = 12_000_000
 const A4_MM = { w: 210, h: 297 }
@@ -19,7 +21,7 @@ async function render(el: HTMLElement) {
 }
 
 const toBlob = (canvas: HTMLCanvasElement, type: string, quality?: number) =>
-  new Promise<Blob>((resolve, reject) => canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('تعذّر إنشاء الملف'))), type, quality))
+  new Promise<Blob>((resolve, reject) => canvas.toBlob((b) => (b ? resolve(b) : reject(new Error(t('تعذّر إنشاء الملف')))), type, quality))
 
 /** Phones: open the share sheet (Save Image / Save to Files). Everything else: a normal download. */
 async function save(blob: Blob, filename: string) {

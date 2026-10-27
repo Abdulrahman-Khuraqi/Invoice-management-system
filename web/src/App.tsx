@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { api } from './api'
 import { AppProvider, useApp } from './context'
-import { BottomNav, OfflineBanner } from './components/Layout'
+import { OfflineBanner, Shell } from './components/Layout'
 import { Button, PageLoader } from './components/ui'
 import Add from './pages/Add'
 import Home from './pages/Home'
@@ -11,9 +11,11 @@ import { Login, Setup } from './pages/Login'
 import Reports from './pages/Reports'
 import Settings from './pages/Settings'
 import CatalogSettings from './pages/settings/Catalog'
+import StoreInfoPage from './pages/settings/StoreInfoPage'
 import StoresSettings from './pages/settings/Stores'
 import { ActivityPage, UsersSettings } from './pages/settings/Users'
 import type { User } from './types'
+import { t } from './lib/i18n'
 
 type Boot = { state: 'loading' } | { state: 'setup' } | { state: 'login' } | { state: 'ready'; user: User } | { state: 'error'; message: string }
 
@@ -54,17 +56,18 @@ export default function App() {
       )}
       {boot.state === 'error' && (
         <div className="flex min-h-dvh flex-col items-center justify-center gap-4 px-6 text-center">
-          <p className="text-[18px] font-semibold">تعذّر الاتصال بالسيرفر</p>
+          <p className="text-[18px] font-semibold">{t('تعذّر الاتصال بالسيرفر')}</p>
           <p className="text-[15px] text-muted">{boot.message}</p>
-          <Button onClick={start}>إعادة المحاولة</Button>
+          <Button onClick={start}>{t('إعادة المحاولة')}</Button>
         </div>
       )}
       {boot.state === 'setup' && <Setup onDone={setUser} />}
       {boot.state === 'login' && <Login onLogin={setUser} />}
       {boot.state === 'ready' && (
         <AppProvider user={boot.user} setUser={setUser}>
-          <AppRoutes />
-          <BottomNav />
+          <Shell>
+            <AppRoutes />
+          </Shell>
         </AppProvider>
       )}
     </>
@@ -81,6 +84,7 @@ function AppRoutes() {
       <Route path="/reports" element={<Reports />} />
       <Route path="/settings" element={<Settings />} />
       <Route path="/settings/catalog" element={<CatalogSettings />} />
+      <Route path="/settings/store-info" element={<StoreInfoPage />} />
       {can('admin') && (
         <>
           <Route path="/settings/stores" element={<StoresSettings />} />
