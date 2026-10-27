@@ -42,7 +42,8 @@ export function Sheet({
           </IconButton>
         </div>
         <div className="flex-1 overflow-y-auto overscroll-contain px-5 pb-5">{children}</div>
-        {footer && <div className="safe-bottom border-t border-line px-5 pt-3 pb-3">{footer}</div>}
+        {/* Not .safe-bottom: that rule is unlayered CSS and would zero out the padding below. */}
+        {footer && <div className="border-t border-line px-5 pt-4 pb-[calc(1.25rem+env(safe-area-inset-bottom))]">{footer}</div>}
         {!footer && <div className="safe-bottom" />}
       </div>
     </div>,
