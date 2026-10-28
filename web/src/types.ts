@@ -128,6 +128,8 @@ export interface StatRow {
   color?: string
   kind?: ItemKind
   day?: string
+  /** Day of week for by_weekday rows: 1 = Sunday ... 7 = Saturday. */
+  dow?: number
   n: number
   total: number
 }
@@ -142,6 +144,14 @@ export interface Stats {
   by_category: StatRow[]
   by_kind: StatRow[]
   daily: StatRow[]
+  /** Payment counts per period; `day` is the first day of the week (Sunday) / month / year. */
+  weekly: StatRow[]
+  monthly: StatRow[]
+  yearly: StatRow[]
+  by_weekday: StatRow[]
+  busiest: { day: string; n: number } | null
+  first_day: string | null
+  last_day: string | null
 }
 
 export interface Activity {

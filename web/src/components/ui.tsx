@@ -230,9 +230,10 @@ export function EmptyState({ icon, title, text, action }: { icon: ReactNode; tit
   )
 }
 
-export function SectionTitle({ children, action, className }: { children: ReactNode; action?: ReactNode; className?: string }) {
+/** `flush` drops the top margin, for sections laid out in columns (spacing then comes from the section itself). */
+export function SectionTitle({ children, action, className, flush }: { children: ReactNode; action?: ReactNode; className?: string; flush?: boolean }) {
   return (
-    <div className={cx('mb-2 mt-6 flex items-center justify-between px-1', className)}>
+    <div className={cx('mb-2 flex items-center justify-between px-1', flush ? 'mt-0' : 'mt-6', className)}>
       <h2 className="text-[15px] font-semibold text-muted">{children}</h2>
       {action}
     </div>

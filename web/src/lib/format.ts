@@ -30,6 +30,14 @@ const dayMonthFmt = new Intl.DateTimeFormat(LOCALE_GREG, { day: 'numeric', month
 /** Clock time of a Date, e.g. "10:42 ص". */
 export const fmtTime = (d: Date) => timeFmt.format(d)
 
+const monthYearFmt = new Intl.DateTimeFormat(LOCALE_GREG, { month: 'short', year: '2-digit' })
+const yearFmt = new Intl.DateTimeFormat(LOCALE_GREG, { year: 'numeric' })
+const weekdayFmt = new Intl.DateTimeFormat(LOCALE_GREG, { weekday: 'long' })
+export const fmtMonthYear = (d: Date) => monthYearFmt.format(d)
+export const fmtYear = (d: Date) => yearFmt.format(d)
+/** Name of a weekday from the database's numbering (1 = Sunday ... 7 = Saturday). */
+export const weekdayName = (dow: number) => weekdayFmt.format(new Date(2024, 0, 6 + dow)) // 7 Jan 2024 was a Sunday
+
 export function fmtDate(s: string | null | undefined) {
   const d = parseDate(s)
   return d ? dateFmt.format(d) : '—'

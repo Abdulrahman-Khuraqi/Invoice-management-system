@@ -1,7 +1,7 @@
 <?php
 defined('APP') or exit;
 
-/** Dashboard and reports: totals per store, per service/product and per category, plus the daily trend. */
+/** Dashboard and reports: totals per store, per service/product and per category, plus payment counts per day/week/month/year. */
 function stats_get(): void
 {
     $u = require_user();
@@ -60,13 +60,41 @@ function stats_get(): void
         $params
     );
 
+    // Payment counts over longer periods. Each row's `day` is the first day of its period
+    // (week = Sunday, month = the 1st, year = 1 Jan), so the app treats every series the same way.
+    $when = 'COALESCE(i.paid_at, i.created_at)';
+    $period = fn(string $expr, int $limit) => all(
+        "SELECT $expr AS day, COUNT(*) AS n, COALESCE(SUM(i.amount), 0) AS total
+         FROM invoices i WHERE $where GROUP BY day ORDER BY day DESC LIMIT $limit",
+        $params
+    );
+    $weekly = $period("DATE_SUB(DATE($when), INTERVAL (DAYOFWEEK($when) - 1) DAY)", 53);
+    $monthly = $period("DATE_FORMAT($when, '%Y-%m-01')", 36);
+    $yearly = $period("DATE_FORMAT($when, '%Y-01-01')", 10);
+
+    // 1 = Sunday ... 7 = Saturday
+    $byWeekday = all(
+        "SELECT DAYOFWEEK($when) AS dow, COUNT(*) AS n FROM invoices i WHERE $where GROUP BY dow ORDER BY dow",
+        $params
+    );
+    $busiest = one(
+        "SELECT DATE($when) AS day, COUNT(*) AS n FROM invoices i WHERE $where GROUP BY day ORDER BY n DESC, day DESC LIMIT 1",
+        $params
+    );
+    $span = one("SELECT MIN(DATE($when)) AS first_day, MAX(DATE($when)) AS last_day FROM invoices i WHERE $where", $params);
+
     $num = function (array $rows): array {
         foreach ($rows as &$r) {
             if (isset($r['id'])) {
                 $r['id'] = (int)$r['id'];
             }
             $r['n'] = (int)$r['n'];
-            $r['total'] = (float)$r['total'];
+            if (isset($r['total'])) {
+                $r['total'] = (float)$r['total'];
+            }
+            if (isset($r['dow'])) {
+                $r['dow'] = (int)$r['dow'];
+            }
         }
         return $rows;
     };
@@ -81,5 +109,12 @@ function stats_get(): void
         'by_category' => $num($byCategory),
         'by_kind' => $num($byKind),
         'daily' => array_reverse($num($daily)),
+        'weekly' => array_reverse($num($weekly)),
+        'monthly' => array_reverse($num($monthly)),
+        'yearly' => array_reverse($num($yearly)),
+        'by_weekday' => $num($byWeekday),
+        'busiest' => $busiest ? ['day' => $busiest['day'], 'n' => (int)$busiest['n']] : null,
+        'first_day' => $span['first_day'] ?? null,
+        'last_day' => $span['last_day'] ?? null,
     ]);
 }
