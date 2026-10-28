@@ -13,6 +13,8 @@ export function priceRange(min: number | null | undefined, max: number | null | 
   if (min == null || max == null) return null
   return min === max ? money(min) : `${money(min)} – ${money(max)}`
 }
+/** Short amount for tight places (chart labels): 15.5K, 1.2M. */
+export const shortMoney = (n: number) => (Math.abs(n) >= 1000 ? compactFmt.format(n) : money(n))
 export const compact =(n: number) => (Math.abs(n) >= 100000 ? compactFmt.format(n) : money(n))
 
 /** "2026-10-12 20:59:11" (server, KSA time) → Date without timezone shifting. */

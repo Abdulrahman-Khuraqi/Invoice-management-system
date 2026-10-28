@@ -45,15 +45,6 @@ function stats_get(): void
         $params
     );
 
-    $byKind = all(
-        "SELECT ci.kind, COUNT(DISTINCT i.id) AS n, COALESCE(SUM(ii.qty * ii.unit_price), 0) AS total
-         FROM invoices i
-         JOIN invoice_items ii ON ii.invoice_id = i.id
-         JOIN catalog_items ci ON ci.id = ii.item_id
-         WHERE $where GROUP BY ci.kind",
-        $params
-    );
-
     $daily = all(
         "SELECT DATE(COALESCE(i.paid_at, i.created_at)) AS day, COUNT(*) AS n, COALESCE(SUM(i.amount), 0) AS total
          FROM invoices i WHERE $where GROUP BY day ORDER BY day DESC LIMIT 90",
@@ -74,11 +65,15 @@ function stats_get(): void
 
     // 1 = Sunday ... 7 = Saturday
     $byWeekday = all(
-        "SELECT DAYOFWEEK($when) AS dow, COUNT(*) AS n FROM invoices i WHERE $where GROUP BY dow ORDER BY dow",
+        "SELECT DAYOFWEEK($when) AS dow, COUNT(*) AS n, COALESCE(SUM(i.amount), 0) AS total FROM invoices i WHERE $where GROUP BY dow ORDER BY dow",
         $params
     );
     $busiest = one(
         "SELECT DATE($when) AS day, COUNT(*) AS n FROM invoices i WHERE $where GROUP BY day ORDER BY n DESC, day DESC LIMIT 1",
+        $params
+    );
+    $richest = one(
+        "SELECT DATE($when) AS day, COUNT(*) AS n, COALESCE(SUM(i.amount), 0) AS total FROM invoices i WHERE $where GROUP BY day ORDER BY total DESC, day DESC LIMIT 1",
         $params
     );
     $span = one("SELECT MIN(DATE($when)) AS first_day, MAX(DATE($when)) AS last_day FROM invoices i WHERE $where", $params);
@@ -107,13 +102,13 @@ function stats_get(): void
         'by_store' => $num($byStore),
         'by_item' => $num($byItem),
         'by_category' => $num($byCategory),
-        'by_kind' => $num($byKind),
         'daily' => array_reverse($num($daily)),
         'weekly' => array_reverse($num($weekly)),
         'monthly' => array_reverse($num($monthly)),
         'yearly' => array_reverse($num($yearly)),
         'by_weekday' => $num($byWeekday),
         'busiest' => $busiest ? ['day' => $busiest['day'], 'n' => (int)$busiest['n']] : null,
+        'richest' => $richest ? ['day' => $richest['day'], 'n' => (int)$richest['n'], 'total' => (float)$richest['total']] : null,
         'first_day' => $span['first_day'] ?? null,
         'last_day' => $span['last_day'] ?? null,
     ]);

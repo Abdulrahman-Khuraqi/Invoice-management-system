@@ -25,6 +25,8 @@ export interface Period {
   key: string
   date: Date
   n: number
+  /** Revenue of the period. */
+  total: number
 }
 
 /**
@@ -35,7 +37,7 @@ export interface Period {
 export function fillPeriods(rows: StatRow[], g: Grain, from: string | null, to: string | null): Period[] {
   const end = parseDate(to)
   if (!end || !rows.length) return []
-  const counts = new Map(rows.map((r) => [r.day!, r.n]))
+  const found = new Map(rows.map((r) => [r.day!, r]))
   const last = startOf(g, end)
   let first = step(g, last, -(WINDOW[g] - 1))
   const rangeStart = parseDate(from)
@@ -43,7 +45,7 @@ export function fillPeriods(rows: StatRow[], g: Grain, from: string | null, to: 
   const out: Period[] = []
   for (let d = first; d <= last; d = step(g, d, 1)) {
     const key = ymd(d)
-    out.push({ key, date: d, n: counts.get(key) ?? 0 })
+    out.push({ key, date: d, n: found.get(key)?.n ?? 0, total: found.get(key)?.total ?? 0 })
   }
   return out
 }

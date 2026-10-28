@@ -556,6 +556,19 @@ export const EN: Record<string, string> = {
   "إضافة من القائمة": "Add from the list",
   "لأكثر من خدمة في نفس الفاتورة اضغط + بجانب كل خدمة، ويُقسَّم المبلغ عليها.": "For more than one service on the same invoice, tap + next to each; the amount is split between them.",
   "اختر خدمة أو منتجاً": "Choose a service or product",
+  "اليوم بيوم": "Day by day",
+  "أسبوعاً بأسبوع": "Week by week",
+  "شهراً بشهر": "Month by month",
+  "سنة بسنة": "Year by year",
+  "الإيرادات": "Revenue",
+  "متوسط الدفعة": "Average payment",
+  "متوسط الإيراد اليومي": "Average daily revenue",
+  "إجمالي الإيرادات": "Total revenue",
+  "{0} في اليوم": "{0} per day",
+  "أعلى يوم إيراداً": "Best day by revenue",
+  "المبالغ": "Amounts",
+  "الدفعات": "Payments",
+  "الإيراد": "Revenue",
 }
 
 // Server texts whose English differs from the same Arabic text used in the UI.

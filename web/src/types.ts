@@ -142,7 +142,6 @@ export interface Stats {
   by_store: StatRow[]
   by_item: StatRow[]
   by_category: StatRow[]
-  by_kind: StatRow[]
   daily: StatRow[]
   /** Payment counts per period; `day` is the first day of the week (Sunday) / month / year. */
   weekly: StatRow[]
@@ -150,6 +149,8 @@ export interface Stats {
   yearly: StatRow[]
   by_weekday: StatRow[]
   busiest: { day: string; n: number } | null
+  /** The day with the highest revenue. */
+  richest: { day: string; n: number; total: number } | null
   first_day: string | null
   last_day: string | null
 }
