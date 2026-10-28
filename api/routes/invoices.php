@@ -212,27 +212,41 @@ function invoices_bulk(): void
             break;
 
         case 'assign_item':
-            $item = one('SELECT * FROM catalog_items WHERE id = ?', [int_in($b['item_id'] ?? null, true, 'الخدمة/المنتج')]);
-            if (!$item || !(int)$item['is_active']) {
-                fail(422, 'الخدمة/المنتج غير موجود');
+            // One item (item_id) or several (item_ids); several share each invoice's amount.
+            $itemIds = array_key_exists('item_ids', $b) ? id_list($b['item_ids']) : [int_in($b['item_id'] ?? null, true, 'الخدمة/المنتج')];
+            if (!$itemIds || count($itemIds) > 20) {
+                fail(422, 'اختر خدمة أو منتجاً');
             }
-            if ($item['store_id'] !== null) {
-                foreach ($rows as $r) {
-                    if ((int)$r['store_id'] !== (int)$item['store_id']) {
-                        fail(422, 'هذا العنصر خاص بمتجر آخر؛ بعض الفواتير المختارة من متجر مختلف');
+            $items = [];
+            foreach ($itemIds as $itemId) {
+                $item = one('SELECT * FROM catalog_items WHERE id = ?', [$itemId]);
+                if (!$item || !(int)$item['is_active']) {
+                    fail(422, 'الخدمة/المنتج غير موجود');
+                }
+                if ($item['store_id'] !== null) {
+                    foreach ($rows as $r) {
+                        if ((int)$r['store_id'] !== (int)$item['store_id']) {
+                            fail(422, 'هذا العنصر خاص بمتجر آخر؛ بعض الفواتير المختارة من متجر مختلف');
+                        }
                     }
                 }
+                $items[] = $item;
             }
             $append = ($b['mode'] ?? 'replace') === 'append';
             if (!$append) {
                 q('DELETE FROM invoice_items WHERE invoice_id IN (' . placeholders($ids) . ')', $ids);
             }
             $ins = db()->prepare('INSERT INTO invoice_items (invoice_id, item_id, qty, unit_price) VALUES (?, ?, 1, ?)');
+            $defaults = array_map(fn($i) => $i['default_price'] === null ? null : (float)$i['default_price'], $items);
             foreach ($rows as $r) {
-                $ins->execute([$r['id'], $item['id'], $append ? (float)($item['default_price'] ?? 0) : (float)$r['amount']]);
+                $prices = $append ? array_map(fn($d) => $d ?? 0.0, $defaults) : fit_prices((float)$r['amount'], $defaults);
+                foreach ($items as $k => $item) {
+                    $ins->execute([$r['id'], $item['id'], $prices[$k]]);
+                }
             }
             q('UPDATE invoices SET updated_by = ? WHERE id IN (' . placeholders($ids) . ')', array_merge([$u['id']], $ids));
-            log_activity($u, 'classify', 'invoice', null, "تحديد «{$item['name']}» لـ $n فاتورة");
+            $names = implode('، ', array_column($items, 'name'));
+            log_activity($u, 'classify', 'invoice', null, "تحديد «{$names}» لـ $n فاتورة");
             break;
 
         case 'move_store':
@@ -306,6 +320,23 @@ function save_lines(int $invoiceId, int $storeId, $lines, float $amount, array $
         if (!is_array($line)) {
             fail(422, 'بند غير صحيح');
         }
+    }
+    $lines = array_values($lines);
+    // Lines without a price share what the priced lines leave of the invoice amount, so the lines add up to it.
+    $prices = array_map(fn($l) => money_in($l['unit_price'] ?? null, false, 'السعر'), $lines);
+    $qtys = array_map(fn($l) => money_in($l['qty'] ?? 1, false, 'الكمية') ?? 1, $lines);
+    $open = array_keys(array_filter($prices, fn($p) => $p === null));
+    if ($open) {
+        $priced = 0.0;
+        foreach ($prices as $i => $p) {
+            $priced += $p === null ? 0 : $p * $qtys[$i];
+        }
+        foreach (split_amount(max(0.0, $amount - $priced), count($open)) as $k => $share) {
+            $i = $open[$k];
+            $prices[$i] = $qtys[$i] > 0 ? round($share / $qtys[$i], 2) : 0;
+        }
+    }
+    foreach ($lines as $n => $line) {
         $itemId = int_in($line['item_id'] ?? null, true, 'الخدمة/المنتج');
         $item = one('SELECT id, store_id, is_active, name FROM catalog_items WHERE id = ?', [$itemId]);
         if (!$item) {
@@ -317,17 +348,51 @@ function save_lines(int $invoiceId, int $storeId, $lines, float $amount, array $
         if ($item['store_id'] !== null && (int)$item['store_id'] !== $storeId) {
             fail(422, "«{$item['name']}» خاص بمتجر آخر");
         }
-        $qty = money_in($line['qty'] ?? 1, false, 'الكمية') ?? 1;
+        $qty = $qtys[$n];
         if ($qty <= 0) {
             fail(422, 'الكمية يجب أن تكون أكبر من صفر');
         }
-        // A single line without a price takes the invoice amount, so the common case is one tap.
-        $price = money_in($line['unit_price'] ?? null, false, 'السعر');
-        if ($price === null) {
-            $price = count($lines) === 1 ? round($amount / $qty, 2) : 0;
-        }
+        $price = $prices[$n];
         $ins->execute([$invoiceId, $itemId, $qty, $price, str_in($line['line_note'] ?? null, 255)]);
     }
+}
+
+/** Splits an amount into $n parts in whole halalas; the last part takes the rounding remainder. */
+function split_amount(float $amount, int $n): array
+{
+    if ($n <= 0) {
+        return [];
+    }
+    $cents = (int)round($amount * 100);
+    $base = intdiv($cents, $n);
+    $parts = array_fill(0, $n, $base / 100);
+    $parts[$n - 1] = ($cents - $base * ($n - 1)) / 100;
+    return $parts;
+}
+
+/**
+ * Prices for several items that together make up $amount: default prices are kept when they fit and the
+ * items without one share the rest; otherwise the amount is split equally. Mirrors fitPrices() in the app.
+ */
+function fit_prices(float $amount, array $defaults): array
+{
+    $n = count($defaults);
+    $open = array_keys(array_filter($defaults, fn($d) => $d === null || (float)$d <= 0));
+    $fixed = 0.0;
+    foreach ($defaults as $d) {
+        $fixed += $d === null || (float)$d <= 0 ? 0 : (float)$d;
+    }
+    if ($open && $fixed <= $amount + 0.004) {
+        $out = array_map(fn($d) => $d === null || (float)$d <= 0 ? 0.0 : (float)$d, $defaults);
+        foreach (split_amount($amount - $fixed, count($open)) as $k => $share) {
+            $out[$open[$k]] = $share;
+        }
+        return $out;
+    }
+    if (!$open && abs($fixed - $amount) < 0.005) {
+        return array_map('floatval', $defaults);
+    }
+    return split_amount($amount, $n);
 }
 
 function load_invoice(int $id, array $u): array

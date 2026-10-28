@@ -10,7 +10,7 @@ import { Sheet } from '../components/Sheet'
 import { LogoPicker } from '../components/StoreLogo'
 import { Badge, Button, Card, ColorPicker, Field, Input, Money, Segmented, Select, StoreDot, Switch, cx } from '../components/ui'
 import type { ParsedFile, ParsedRow } from '../lib/excel'
-import { planUpdate, type RowUpdate } from '../lib/importDiff'
+import { missingFields, planUpdate, type RowUpdate } from '../lib/importDiff'
 import type { Invoice } from '../types'
 import { PALETTE } from '../lib/format'
 import type { LogoImage } from '../lib/image'
@@ -90,7 +90,7 @@ function ImportPanel() {
   const [showAllUpdates, setShowAllUpdates] = useState(false)
   const [stage, setStage] = useState<'pick' | 'review' | 'importing' | 'done'>('pick')
   const [progress, setProgress] = useState({ done: 0, total: 0 })
-  const [result, setResult] = useState<{ inserted: number; skipped: number; updated: number; failed: { id: number; message: string }[] }>({ inserted: 0, skipped: 0, updated: 0, failed: [] })
+  const [result, setResult] = useState<{ inserted: number; filled: number; skipped: number; updated: number; failed: { id: number; message: string }[] }>({ inserted: 0, filled: 0, skipped: 0, updated: 0, failed: [] })
   const [newStoreFor, setNewStoreFor] = useState<string | null>(null)
   const [creatingItems, setCreatingItems] = useState(false)
 
@@ -158,6 +158,18 @@ function ImportPanel() {
     () => [...new Set(newRows.filter((r) => r.item_name && !r.item_id).map((r) => r.item_name!.trim()))],
     [newRows],
   )
+
+  // Gateway rows of invoices we already have, where the stored invoice is missing something the file has
+  // (e.g. the email). They are sent with the import; the server fills only the empty fields.
+  const fills = useMemo(() => {
+    const byTxn = new Map(known.filter((i) => i.transaction_id).map((i) => [i.transaction_id!, i]))
+    return resolved.flatMap((r) => {
+      const inv = r.format === 'gateway' && existing?.has(r.transaction_id) ? byTxn.get(r.transaction_id) : undefined
+      const fields = inv ? missingFields(r, inv) : []
+      return inv && fields.length ? [{ row: { ...r, store_id: inv.store_id }, fields }] : []
+    })
+  }, [resolved, known, existing])
+  const fillLabels = useMemo(() => [...new Set(fills.flatMap((f) => f.fields))], [fills])
 
   /** Changes an edited file would make to invoices we already have. */
   const plans = useMemo(() => {
@@ -248,7 +260,7 @@ function ImportPanel() {
   }
 
   const run = async () => {
-    const rows = newRows.filter((r) => r.store_id)
+    const rows = [...newRows.filter((r) => r.store_id), ...fills.map((f) => f.row)]
     const toUpdate = updates
     const fileName = files.map((f) => f.fileName).join('، ').slice(0, 120)
     setStage('importing')
@@ -257,17 +269,19 @@ function ImportPanel() {
       .filter(([k, v]) => k.startsWith('t:') && v)
       .map(([k, v]) => ({ terminal_id: k.slice(2), store_id: +v }))
     let inserted = 0
+    let filled = 0
     let skipped = 0
     let updated = 0
     const failed: { id: number; message: string }[] = []
     try {
       for (let i = 0; i < rows.length; i += BATCH) {
         const batch = rows.slice(i, i + BATCH).map(({ file: _f, format: _fm, columns: _c, store_name: _s, item_name: _i, item_raw: _ir, invoice_id: _id, ...r }) => r)
-        const r = await api<{ inserted: number; skipped: number }>('import', {
+        const r = await api<{ inserted: number; filled?: number; skipped: number }>('import', {
           method: 'POST',
           body: { rows: batch, terminals: i === 0 ? terminals : [], file_name: fileName },
         })
         inserted += r.inserted
+        filled += r.filled ?? 0
         skipped += r.skipped
         setProgress({ done: Math.min(i + BATCH, rows.length), total: rows.length + toUpdate.length })
       }
@@ -280,12 +294,13 @@ function ImportPanel() {
         failed.push(...r.errors)
         setProgress({ done: rows.length + Math.min(i + BATCH, toUpdate.length), total: rows.length + toUpdate.length })
       }
-      setResult({ inserted, skipped: skipped + summary.dup, updated, failed })
+      // Rows sent only to fill missing fields are among the duplicates already counted in summary.dup.
+      setResult({ inserted, filled, skipped: skipped + summary.dup - fills.length, updated, failed })
       setStage('done')
       if (terminals.length) reloadStores()
     } catch (e) {
       toast(errorMessage(e), 'error')
-      setResult({ inserted, skipped, updated, failed })
+      setResult({ inserted, filled, skipped, updated, failed })
       setStage('review')
     }
   }
@@ -309,7 +324,13 @@ function ImportPanel() {
               <span className="font-semibold text-fg">{t('تم تحديث {0} فاتورة', result.updated)}</span>
             </>
           )}
-          {result.inserted === 0 && result.updated === 0 && t('لا توجد تغييرات')}
+          {result.filled > 0 && (
+            <>
+              {(result.inserted > 0 || result.updated > 0) && ' · '}
+              <span className="font-semibold text-fg">{t('اكتملت بيانات {0} فاتورة', result.filled)}</span>
+            </>
+          )}
+          {result.inserted === 0 && result.updated === 0 && result.filled === 0 && t('لا توجد تغييرات')}
           {result.skipped > 0 && (
             <>
               {' · '}{t('تم تجاهل {0} مكررة', result.skipped)}
@@ -512,6 +533,25 @@ function ImportPanel() {
             </div>
           </Card>
 
+          {fills.length > 0 && (
+            <Card>
+              <div className="flex items-start gap-3">
+                <CheckCircle2 className="mt-0.5 size-5 shrink-0 text-success" />
+                <div className="min-w-0 flex-1">
+                  <p className="text-[15px] font-semibold">{t('إكمال بيانات ناقصة في {0} فاتورة موجودة', fills.length)}</p>
+                  <p className="mt-0.5 text-[13px] text-muted">{t('هذه الفواتير مستوردة من قبل وينقصها ما يوجد في الملف. تُكمَل الحقول الفارغة فقط ولا يتغير شيء آخر.')}</p>
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    {fillLabels.map((l) => (
+                      <Badge key={l} tone="success">
+                        {l}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </Card>
+          )}
+
           {plans.warned.length > 0 && (
             <Card>
               <div className="flex items-start gap-3">
@@ -571,11 +611,14 @@ function ImportPanel() {
             </Card>
           ) : (
             <div className="flex gap-3">
-              <Button size="lg" block disabled={!summary.fresh && !updates.length} onClick={run}>
-                {summary.fresh > 0 && t('استيراد {0} فاتورة', summary.fresh)}
-                {summary.fresh > 0 && updates.length > 0 && t(' و')}
-                {updates.length > 0 && t('تحديث {0} فاتورة', updates.length)}
-                {!summary.fresh && !updates.length && t('لا توجد تغييرات للاستيراد')}
+              <Button size="lg" block disabled={!summary.fresh && !updates.length && !fills.length} onClick={run}>
+                {[
+                  summary.fresh > 0 && t('استيراد {0} فاتورة', summary.fresh),
+                  updates.length > 0 && t('تحديث {0} فاتورة', updates.length),
+                  fills.length > 0 && t('إكمال {0} فاتورة', fills.length),
+                ]
+                  .filter(Boolean)
+                  .join(t(' و')) || t('لا توجد تغييرات للاستيراد')}
               </Button>
               <Button size="lg" variant="secondary" onClick={reset}>
                 

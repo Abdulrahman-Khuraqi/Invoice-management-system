@@ -4,6 +4,21 @@ import { X } from 'lucide-react'
 import { IconButton } from './ui'
 import { t } from '../lib/i18n'
 
+/**
+ * The page behind open sheets must not scroll. Sheets can stack (a picker over an invoice, a confirm over
+ * both) and close in any order, so they share one counter: the page scrolls again when the last one closes.
+ */
+let openSheets = 0
+function lockPageScroll() {
+  if (openSheets++ === 0) document.body.style.overflow = 'hidden'
+  let released = false
+  return () => {
+    if (released) return
+    released = true
+    if (--openSheets === 0) document.body.style.overflow = ''
+  }
+}
+
 /** Bottom sheet on phones, centered dialog on wide screens. */
 export function Sheet({
   open,
@@ -18,16 +33,12 @@ export function Sheet({
   children: ReactNode
   footer?: ReactNode
 }) {
+  useEffect(() => (open ? lockPageScroll() : undefined), [open])
   useEffect(() => {
     if (!open) return
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose()
     document.addEventListener('keydown', onKey)
-    const prev = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-    return () => {
-      document.removeEventListener('keydown', onKey)
-      document.body.style.overflow = prev
-    }
+    return () => document.removeEventListener('keydown', onKey)
   }, [open, onClose])
 
   if (!open) return null

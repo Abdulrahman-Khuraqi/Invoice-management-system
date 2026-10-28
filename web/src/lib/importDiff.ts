@@ -35,6 +35,14 @@ const TEXT_FIELDS = [
 
 const clean = (v: string | null | undefined) => (v ?? '').trim()
 
+/** Fields a gateway file fills in on an invoice that is already stored, where that invoice has them empty. */
+const FILL_FIELDS = [...TEXT_FIELDS.filter(([f]) => f !== 'note'), ['terminal_id', t('رقم الجهاز')]] as const
+
+/** Labels of the fields the file row has and the stored invoice is missing (the import fills them in). */
+export function missingFields(row: ParsedRow, inv: Invoice): string[] {
+  return FILL_FIELDS.filter(([f]) => clean(row[f]) && !clean(inv[f])).map(([, label]) => label)
+}
+
 /** Spreadsheets drop leading zeros of numbers-as-text ("0551…" -> 551…), so those don't count as edits. */
 function sameText(a: string | null | undefined, b: string | null | undefined) {
   const x = clean(a)

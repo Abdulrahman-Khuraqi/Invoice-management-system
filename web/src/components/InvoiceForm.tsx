@@ -3,11 +3,12 @@ import { ChevronDown, Package, Plus, Trash2, Wrench } from 'lucide-react'
 import { api, errorMessage } from '../api'
 import { useApp } from '../context'
 import { PAY_METHODS, money, toInputDateTime, ymdhm } from '../lib/format'
-import type { Invoice, ItemKind } from '../types'
+import type { CatalogItem, Invoice, ItemKind } from '../types'
 import { useFeedback } from './Feedback'
 import { ItemPicker } from './ItemPicker'
 import { Button, Field, IconButton, Input, Select, Textarea, cx } from './ui'
 import { t } from '../lib/i18n'
+import { fitPrices, toNum } from '../lib/split'
 
 interface Line {
   item_id: number
@@ -18,14 +19,9 @@ interface Line {
   unit_price: string
 }
 
-const toNum = (s: string) => {
-  const n = parseFloat(s.replace(/[٠-٩]/g, (d) => String('٠١٢٣٤٥٦٧٨٩'.indexOf(d))).replace(/,/g, ''))
-  return isNaN(n) ? 0 : n
-}
-
 /** Add or edit an invoice, including which services/products it is for. */
 export function InvoiceForm({ initial, onSaved, onCancel }: { initial?: Invoice; onSaved: (inv: Invoice) => void; onCancel?: () => void }) {
-  const { activeStores, currentStore, storeById } = useApp()
+  const { activeStores, currentStore, storeById, items } = useApp()
   const { toast } = useFeedback()
   const defaultStore = initial?.store_id ?? currentStore ?? (activeStores.length === 1 ? activeStores[0].id : null)
   const [f, setF] = useState({
@@ -63,6 +59,15 @@ export function InvoiceForm({ initial, onSaved, onCancel }: { initial?: Invoice;
   const linesTotal = lines.reduce((a, l) => a + toNum(l.qty || '1') * (l.unit_price === '' ? (lines.length === 1 ? amount / toNum(l.qty || '1') : 0) : toNum(l.unit_price)), 0)
   const mismatch = lines.length > 1 && Math.abs(linesTotal - amount) > 0.009
   const archivedStore = initial && !storeById(initial.store_id)?.is_active ? storeById(initial.store_id) : undefined
+
+  /** Prices that add up to the invoice amount; a single line just follows the amount. */
+  const refit = (ls: Line[]): Line[] => {
+    if (ls.length < 2) return ls.map((l) => ({ ...l, unit_price: '' }))
+    const prices = fitPrices(amount, ls.map((l) => items.find((i) => i.id === l.item_id)?.default_price))
+    return ls.map((l, k) => ({ ...l, unit_price: String(Math.round((prices[k] / (toNum(l.qty || '1') || 1)) * 100) / 100) }))
+  }
+  const addItems = (picked: CatalogItem[]) =>
+    setLines((ls) => refit([...ls, ...picked.filter((p) => !ls.some((l) => l.item_id === p.id)).map((p) => ({ item_id: p.id, name: p.name, kind: p.kind, qty: '1', unit_price: '' }))]))
 
   const submit = async () => {
     const errs: Record<string, string> = {}
@@ -145,7 +150,7 @@ export function InvoiceForm({ initial, onSaved, onCancel }: { initial?: Invoice;
                   {l.kind === 'service' ? <Wrench className="size-4" /> : <Package className="size-4" />}
                 </span>
                 <span className="min-w-0 flex-1 truncate text-[16px] font-semibold">{l.name}</span>
-                <IconButton label={t('حذف البند')} onClick={() => setLines((ls) => ls.filter((_, i) => i !== idx))} className="size-9 text-danger">
+                <IconButton label={t('حذف البند')} onClick={() => setLines((ls) => refit(ls.filter((_, i) => i !== idx)))} className="size-9 text-danger">
                   <Trash2 className="size-5" />
                 </IconButton>
               </div>
@@ -173,10 +178,14 @@ export function InvoiceForm({ initial, onSaved, onCancel }: { initial?: Invoice;
           ))}
         </div>
         {mismatch && (
-          <p className="mt-2 text-[13px] text-warn">
-            
-            {t('مجموع البنود {0} لا يساوي مبلغ الفاتورة {1}', money(linesTotal), money(amount))}
-          </p>
+          <div className="mt-2 flex items-center justify-between gap-2 text-[13px] text-warn">
+            <span>{t('مجموع البنود {0} لا يساوي مبلغ الفاتورة {1}', money(linesTotal), money(amount))}</span>
+            {amount > 0 && (
+              <button type="button" className="shrink-0 font-bold underline" onClick={() => setLines(refit)}>
+                {t('ضبط')}
+              </button>
+            )}
+          </div>
         )}
       </div>
 
@@ -248,17 +257,8 @@ export function InvoiceForm({ initial, onSaved, onCancel }: { initial?: Invoice;
         open={picker}
         onClose={() => setPicker(false)}
         storeId={storeId}
-        onPick={(item) =>
-          setLines((ls) =>
-            ls.some((l) => l.item_id === item.id)
-              ? ls
-              : [
-                  // Turning one line into two: the first line needs an explicit price now.
-                  ...ls.map((l) => (ls.length === 1 && l.unit_price === '' ? { ...l, unit_price: f.amount } : l)),
-                  { item_id: item.id, name: item.name, kind: item.kind, qty: '1', unit_price: ls.length ? String(item.default_price ?? '') : '' },
-                ],
-          )
-        }
+        exclude={lines.map((l) => l.item_id)}
+        onPickMany={addItems}
       />
     </div>
     </div>

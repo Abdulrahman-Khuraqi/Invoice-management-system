@@ -140,15 +140,18 @@ export function parseWorkbook(data: ArrayBuffer | Uint8Array, fileName: string):
   const wb = XLSX.read(data, { type: 'array', cellDates: true })
   const sheet = wb.Sheets[wb.SheetNames[0]]
   if (!sheet) return { fileName, format: 'gateway', rows: [], errors: [t('الملف فارغ')], columns: [] }
-  // Exports made in English carry English headers; map them back to the canonical (Arabic) names used below.
-  const records = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { defval: null, raw: true }).map((r) =>
-    Object.fromEntries(Object.entries(r).map(([k, v]) => [HEADER_ALIASES.get(k.trim()) ?? k.trim(), v])),
+  const raw = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { defval: null, raw: true }).map((r) =>
+    Object.fromEntries(Object.entries(r).map(([k, v]) => [k.trim(), v])),
   )
+  // The gateway's headers are read as they are: some (e.g. "Email") are also English names of template columns.
+  const rawHeaders = Object.keys(raw[0] ?? {})
+  if (rawHeaders.includes('TransactionID') && rawHeaders.includes('TotalAmount')) {
+    return parseGateway(raw, fileName)
+  }
+  // Exports made in English carry English headers; map them back to the canonical (Arabic) names used below.
+  const records = raw.map((r) => Object.fromEntries(Object.entries(r).map(([k, v]) => [HEADER_ALIASES.get(k) ?? k, v])))
   const headers = Object.keys(records[0] ?? {})
 
-  if (headers.includes('TransactionID') && headers.includes('TotalAmount')) {
-    return parseGateway(records, fileName)
-  }
   if (headers.includes(TEMPLATE_COLUMNS.amount) && headers.includes(TEMPLATE_COLUMNS.date)) {
     return parseTemplate(records, fileName, headers)
   }

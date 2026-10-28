@@ -123,11 +123,17 @@ function invoice_fields_changed(array $old, array $new): bool
     return false;
 }
 
+/** Fields an already-imported invoice takes from the file again, but only where it is still empty. */
+const IMPORT_FILL_FIELDS = ['invoice_no' => 64, 'customer_name' => 160, 'email' => 160, 'phone' => 40, 'pay_method' => 40,
+    'card_type' => 40, 'card_last4' => 8, 'terminal_id' => 64, 'reference_no' => 64, 'auth_code' => 32];
+
 /**
  * Inserts a batch of rows parsed from the gateway's Excel export.
- * Rows whose TransactionID already exists are skipped, so re-importing a file is safe.
+ * Rows whose TransactionID already exists are not added again; their empty fields (e.g. an email that an
+ * earlier import missed) are filled from the row, nothing already set is overwritten.
  * Body: { rows: [...], terminals: [{terminal_id, store_id}] } — terminals are remembered for next time.
  * A row may carry item_id (service/product, from the Excel template) and a note.
+ * Returns { inserted, filled, skipped }.
  */
 function import_rows(): void
 {
@@ -163,9 +169,15 @@ function import_rows(): void
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, \'import\', ?, ?)'
     );
     $line = db()->prepare('INSERT INTO invoice_items (invoice_id, item_id, qty, unit_price) VALUES (?, ?, 1, ?)');
+    $fill = db()->prepare(
+        'UPDATE invoices SET '
+        . implode(', ', array_map(fn($f) => "$f = COALESCE(NULLIF($f, ''), ?, $f)", array_keys(IMPORT_FILL_FIELDS)))
+        . ', created_at_src = COALESCE(created_at_src, ?) WHERE transaction_id = ? AND store_id = ?'
+    );
     $itemCache = [];
     $storeCache = [];
     $inserted = 0;
+    $filled = 0;
     $skipped = 0;
     $sum = 0.0;
     foreach ($rows as $i => $r) {
@@ -216,14 +228,27 @@ function import_rows(): void
             $inserted++;
             $sum += $amount;
         } else {
-            $skipped++;
+            // Already imported: only fill what is still empty, and only in a store this user may edit.
+            $values = [];
+            foreach (IMPORT_FILL_FIELDS as $f => $max) {
+                $values[] = str_in($r[$f] ?? null, $max);
+            }
+            $fill->execute(array_merge($values, [date_in($r['created_at_src'] ?? null), $txn, $storeId]));
+            if ($fill->rowCount() > 0) {
+                $filled++;
+            } else {
+                $skipped++;
+            }
         }
     }
+    $file = str_in($b['file_name'] ?? null, 120);
     if ($inserted > 0) {
         assign_invoice_numbers();
-        $file = str_in($b['file_name'] ?? null, 120);
         log_activity($u, 'import', 'invoice', null, "استيراد $inserted فاتورة" . ($file ? " من $file" : '') . ' بمجموع ' . round($sum, 2));
     }
+    if ($filled > 0) {
+        log_activity($u, 'update', 'invoice', null, "إكمال بيانات $filled فاتورة" . ($file ? " من $file" : ''));
+    }
     db()->commit();
-    json_out(['inserted' => $inserted, 'skipped' => $skipped]);
+    json_out(['inserted' => $inserted, 'filled' => $filled, 'skipped' => $skipped]);
 }

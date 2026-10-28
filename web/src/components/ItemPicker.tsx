@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { Package, Plus, Search, Wrench } from 'lucide-react'
+import { Check, Package, Plus, Search, Wrench } from 'lucide-react'
 import { api, errorMessage } from '../api'
 import { useApp } from '../context'
 import { KIND_LABELS, money, priceRange } from '../lib/format'
@@ -12,17 +12,22 @@ import { t } from '../lib/i18n'
 /**
  * Pick a service/product from the catalog. Shows items of the given store plus shared ones,
  * and lets editors create a new item without leaving the flow.
+ * With `onPickMany`, several can be ticked and added together (items in `exclude` are already chosen).
  */
 export function ItemPicker({
   open,
   onClose,
   onPick,
+  onPickMany,
+  exclude = [],
   storeId,
   title = t('اختر الخدمة أو المنتج'),
 }: {
   open: boolean
   onClose: () => void
-  onPick: (item: CatalogItem) => void
+  onPick?: (item: CatalogItem) => void
+  onPickMany?: (items: CatalogItem[]) => void
+  exclude?: number[]
   storeId: number | null
   title?: string
 }) {
@@ -30,6 +35,8 @@ export function ItemPicker({
   const [q, setQ] = useState('')
   const [kind, setKind] = useState<'all' | ItemKind>('all')
   const [creating, setCreating] = useState(false)
+  const [chosen, setChosen] = useState<CatalogItem[]>([])
+  const multiple = !!onPickMany
 
   const list = useMemo(() => {
     const term = q.trim().toLowerCase()
@@ -37,26 +44,54 @@ export function ItemPicker({
       (i) =>
         i.is_active &&
         (i.store_id === null || storeId === null || i.store_id === storeId) &&
+        !exclude.includes(i.id) &&
         (kind === 'all' || i.kind === kind) &&
         (!term || i.name.toLowerCase().includes(term) || (i.sku ?? '').toLowerCase().includes(term)),
     )
-  }, [items, q, kind, storeId])
+  }, [items, q, kind, storeId, exclude])
 
   const close = () => {
     setQ('')
     setCreating(false)
+    setChosen([])
     onClose()
   }
+  const toggle = (item: CatalogItem) => setChosen((c) => (c.some((x) => x.id === item.id) ? c.filter((x) => x.id !== item.id) : [...c, item]))
 
   return (
-    <Sheet open={open} onClose={close} title={creating ? t('خدمة أو منتج جديد') : title}>
+    <Sheet
+      open={open}
+      onClose={close}
+      title={creating ? t('خدمة أو منتج جديد') : title}
+      footer={
+        multiple && !creating ? (
+          <Button
+            block
+            size="lg"
+            disabled={!chosen.length}
+            onClick={() => {
+              onPickMany?.(chosen)
+              close()
+            }}
+          >
+            {chosen.length ? t('إضافة {0} خدمة/منتج', chosen.length) : t('اختر خدمة أو أكثر')}
+          </Button>
+        ) : undefined
+      }
+    >
       {creating ? (
         <NewItemForm
           defaultName={q}
           storeId={storeId}
           onCancel={() => setCreating(false)}
           onCreated={(item) => {
-            onPick(item)
+            if (multiple) {
+              setChosen((c) => [...c, item])
+              setCreating(false)
+              setQ('')
+              return
+            }
+            onPick?.(item)
             close()
           }}
         />
@@ -75,16 +110,29 @@ export function ItemPicker({
               { value: 'product', label: t('منتجات') },
             ]}
           />
+          {multiple && <p className="text-[13px] text-muted">{t('يمكنك اختيار أكثر من خدمة، ويُقسَّم مبلغ الفاتورة عليها.')}</p>}
           <div className="space-y-2">
-            {list.map((i) => (
+            {list.map((i) => {
+              const on = chosen.some((x) => x.id === i.id)
+              return (
               <button
                 key={i.id}
+                aria-pressed={multiple ? on : undefined}
                 onClick={() => {
-                  onPick(i)
+                  if (multiple) return toggle(i)
+                  onPick?.(i)
                   close()
                 }}
-                className="flex min-h-16 w-full items-center gap-3 rounded-2xl border border-line bg-surface px-4 py-3 text-start transition active:scale-[0.99] hover:bg-surface-2"
+                className={cx(
+                  'flex min-h-16 w-full items-center gap-3 rounded-2xl border px-4 py-3 text-start transition active:scale-[0.99]',
+                  on ? 'border-primary bg-primary-soft/60 ring-2 ring-primary/25' : 'border-line bg-surface hover:bg-surface-2',
+                )}
               >
+                {multiple && (
+                  <span className={cx('flex size-6 shrink-0 items-center justify-center rounded-lg border-2', on ? 'border-primary bg-primary text-primary-fg' : 'border-line')}>
+                    {on && <Check className="size-4" strokeWidth={3} />}
+                  </span>
+                )}
                 <span className={cx('flex size-10 shrink-0 items-center justify-center rounded-xl', i.kind === 'service' ? 'bg-primary-soft text-primary' : 'bg-success-soft text-success')}>
                   {i.kind === 'service' ? <Wrench className="size-5" /> : <Package className="size-5" />}
                 </span>
@@ -101,7 +149,8 @@ export function ItemPicker({
                   {priceRange(i.price_min, i.price_max) && <span className="num block text-[12px] text-muted">{priceRange(i.price_min, i.price_max)}</span>}
                 </span>
               </button>
-            ))}
+              )
+            })}
             {!list.length && <p className="py-6 text-center text-[15px] text-muted">{q ? t('لا توجد نتائج') : t('لا توجد خدمات أو منتجات بعد')}</p>}
           </div>
           {can('editor') && (

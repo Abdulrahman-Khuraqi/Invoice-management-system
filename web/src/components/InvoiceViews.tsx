@@ -1,5 +1,5 @@
 import { useRef, useState, type ReactNode } from 'react'
-import { AlertCircle, Check, Copy, FileDown, ImageDown, Pencil, Tag, Trash2 } from 'lucide-react'
+import { AlertCircle, Check, Copy, FileDown, ImageDown, Pencil, Scale, Tag, Trash2 } from 'lucide-react'
 import { api, errorMessage } from '../api'
 import { useApp } from '../context'
 import { fmtDate, fmtDateTime, money, payLabel } from '../lib/format'
@@ -8,9 +8,11 @@ import { useFeedback } from './Feedback'
 import { InvoiceForm } from './InvoiceForm'
 import { InvoicePaperPreview, useInvoicePaperExport } from './InvoicePaper'
 import { ItemPicker } from './ItemPicker'
+import { LineSplit, resolvePrices, splitValid } from './LineSplit'
 import { Sheet } from './Sheet'
 import { Badge, Button, Money, Segmented, StoreDot, cx } from './ui'
 import { t } from '../lib/i18n'
+import { fitPrices } from '../lib/split'
 
 /** The invoice's own number (ARV-261009-0001), or the number it came with from the payment file. */
 export const numberLabel = (i: Invoice) => i.doc_no ?? (i.invoice_no ? `#${i.invoice_no}` : null)
@@ -242,37 +244,34 @@ export function InvoiceSheet({
   onChanged: (inv: Invoice) => void
   onDeleted: (id: number) => void
 }) {
-  const { can } = useApp()
+  const { can, items } = useApp()
   const { toast, confirm } = useFeedback()
   const [editing, setEditing] = useState(false)
   const [picker, setPicker] = useState(false)
   const [busy, setBusy] = useState(false)
+  /** Prices being edited (typed text, one per line), or null when not editing the split. */
+  const [split, setSplit] = useState<string[] | null>(null)
   const [view, setView] = useState<'paper' | 'details'>('paper')
   const paperExport = useInvoicePaperExport(invoice)
 
   const close = () => {
     setEditing(false)
+    setSplit(null)
     setView('paper')
     onClose()
   }
 
-  const classify = async (item: CatalogItem) => {
+  /** Saves the lines; `unit_price` is each line's total, divided by the quantity a line already had. */
+  const saveLines = async (lines: { item_id: number; unit_price: number }[], message?: string) => {
     if (!invoice) return
-    if (invoice.lines.some((l) => l.item_id === item.id)) return
     setBusy(true)
     try {
-      // The first item takes the whole amount; adding to existing lines keeps their prices.
-      const body = invoice.lines.length
-        ? {
-            items: [
-              ...invoice.lines.map((l) => ({ item_id: l.item_id, qty: l.qty, unit_price: l.unit_price })),
-              { item_id: item.id, qty: 1, unit_price: item.default_price ?? 0 },
-            ],
-          }
-        : { items: [{ item_id: item.id }] }
+      const qty = (id: number) => invoice.lines.find((l) => l.item_id === id)?.qty || 1
+      const body = { items: lines.map((l) => ({ item_id: l.item_id, qty: qty(l.item_id), unit_price: Math.round((l.unit_price / qty(l.item_id)) * 100) / 100 })) }
       const r = await api<{ invoice: Invoice }>(`invoices/${invoice.id}`, { method: 'PUT', body })
       onChanged(r.invoice)
-      toast(t('تم تحديد الخدمة/المنتج'))
+      setSplit(null)
+      if (message) toast(message)
     } catch (e) {
       toast(errorMessage(e), 'error')
     } finally {
@@ -280,19 +279,24 @@ export function InvoiceSheet({
     }
   }
 
-  const removeLine = async (itemId: number) => {
-    if (!invoice) return
-    const rest = invoice.lines.filter((l) => l.item_id !== itemId)
-    try {
-      const r = await api<{ invoice: Invoice }>(`invoices/${invoice.id}`, {
-        method: 'PUT',
-        body: { items: rest.length === 1 ? [{ item_id: rest[0].item_id, qty: rest[0].qty }] : rest.map((l) => ({ item_id: l.item_id, qty: l.qty, unit_price: l.unit_price })) },
-      })
-      onChanged(r.invoice)
-    } catch (e) {
-      toast(errorMessage(e), 'error')
-    }
+  /** The lines with prices that add up to the invoice amount (catalog prices kept when they fit). */
+  const fitted = (ids: number[]) => {
+    const prices = fitPrices(invoice?.amount ?? 0, ids.map((id) => items.find((i) => i.id === id)?.default_price))
+    return ids.map((item_id, k) => ({ item_id, unit_price: prices[k] }))
   }
+
+  const addItems = (picked: CatalogItem[]) => {
+    if (!invoice || !picked.length) return
+    saveLines(fitted([...invoice.lines.map((l) => l.item_id), ...picked.map((i) => i.id)]), t('تم تحديد الخدمة/المنتج'))
+  }
+
+  const removeLine = (itemId: number) => {
+    if (!invoice) return
+    saveLines(fitted(invoice.lines.filter((l) => l.item_id !== itemId).map((l) => l.item_id)))
+  }
+
+  const linesTotal = invoice ? invoice.lines.reduce((a, l) => a + l.qty * l.unit_price, 0) : 0
+  const mismatch = !!invoice && invoice.lines.length > 0 && Math.abs(linesTotal - invoice.amount) > 0.009
 
   const remove = async () => {
     if (!invoice) return
@@ -366,16 +370,54 @@ export function InvoiceSheet({
           </div>
 
           <div className="mb-4 rounded-3xl border border-line p-4">
-            <div className="mb-2 flex items-center justify-between">
+            <div className="mb-2 flex items-center justify-between gap-2">
               <p className="text-[16px] font-semibold">{t('الخدمة / المنتج')}</p>
-              {can('editor') && (
-                <Button size="sm" variant="soft" loading={busy} icon={<Tag className="size-4" />} onClick={() => setPicker(true)}>
-                  {invoice.lines.length ? t('إضافة') : t('تحديد')}
-                </Button>
+              {can('editor') && !split && (
+                <div className="flex gap-2">
+                  {invoice.lines.length > 1 && (
+                    <Button size="sm" variant="secondary" icon={<Scale className="size-4" />} onClick={() => setSplit(invoice.lines.map((l) => String(l.qty * l.unit_price)))}>
+                      {t('الأسعار')}
+                    </Button>
+                  )}
+                  <Button size="sm" variant="soft" loading={busy} icon={<Tag className="size-4" />} onClick={() => setPicker(true)}>
+                    {invoice.lines.length ? t('إضافة') : t('تحديد')}
+                  </Button>
+                </div>
               )}
             </div>
             {!invoice.lines.length && <p className="rounded-2xl bg-warn-soft px-4 py-3 text-[15px] font-medium text-warn">{t('هذه الفاتورة غير مصنّفة بعد')}</p>}
-            <div className="space-y-1.5">
+            {split && (
+              <div className="space-y-3">
+                <p className="text-[13px] text-muted">{t('عدّل سعر كل بند؛ البند الأخير يأخذ الباقي من مبلغ الفاتورة.')}</p>
+                <LineSplit amount={invoice.amount} lines={invoice.lines} prices={split} onChange={setSplit} />
+                <div className="flex gap-2">
+                  <Button
+                    block
+                    size="sm"
+                    loading={busy}
+                    disabled={!splitValid(invoice.amount, split)}
+                    onClick={() => {
+                      const prices = resolvePrices(invoice.amount, split)
+                      saveLines(invoice.lines.map((l, k) => ({ item_id: l.item_id, unit_price: prices[k] })), t('تم حفظ الأسعار'))
+                    }}
+                  >
+                    {t('حفظ الأسعار')}
+                  </Button>
+                  <Button block size="sm" variant="secondary" onClick={() => setSplit(null)}>
+                    {t('إلغاء')}
+                  </Button>
+                </div>
+              </div>
+            )}
+            {!split && mismatch && can('editor') && (
+              <div className="mb-2 flex items-center justify-between gap-2 rounded-2xl bg-warn-soft px-3 py-2 text-[13px] text-warn">
+                <span>{t('مجموع البنود {0} لا يساوي مبلغ الفاتورة {1}', money(linesTotal), money(invoice.amount))}</span>
+                <button className="shrink-0 font-bold underline" disabled={busy} onClick={() => saveLines(fitted(invoice.lines.map((l) => l.item_id)))}>
+                  {t('ضبط')}
+                </button>
+              </div>
+            )}
+            <div className={cx('space-y-1.5', split && 'hidden')}>
               {invoice.lines.map((l) => (
                 <div key={l.item_id} className="flex items-center gap-2 rounded-2xl bg-surface-2 px-3 py-2.5">
                   <Badge tone={l.kind === 'service' ? 'primary' : 'success'}>{l.kind === 'service' ? t('خدمة') : t('منتج')}</Badge>
@@ -452,7 +494,13 @@ export function InvoiceSheet({
               </Button>
             </div>
           )}
-          <ItemPicker open={picker} onClose={() => setPicker(false)} storeId={invoice.store_id} onPick={classify} />
+          <ItemPicker
+            open={picker}
+            onClose={() => setPicker(false)}
+            storeId={invoice.store_id}
+            exclude={invoice.lines.map((l) => l.item_id)}
+            onPickMany={addItems}
+          />
         </div>
       )}
     </Sheet>

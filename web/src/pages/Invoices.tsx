@@ -343,7 +343,7 @@ export default function Invoices() {
         onClose={() => setSheet(null)}
         storeId={commonStore}
         title={t('تحديد الخدمة/المنتج لـ {0} فاتورة', selected.size)}
-        onPick={(i) => bulk({ action: 'assign_item', item_id: i.id }, t('تم تحديد «{0}»', i.name))}
+        onPickMany={(list) => bulk({ action: 'assign_item', item_ids: list.map((i) => i.id) }, t('تم تحديد «{0}»', list.map((i) => i.name).join(t('، '))))}
       />
 
       <Sheet open={sheet === 'bulkMove'} onClose={() => setSheet(null)} title={t('نقل {0} فاتورة إلى متجر', selected.size)}>
